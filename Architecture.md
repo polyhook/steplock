@@ -208,7 +208,7 @@ Commit `.steplock/checklists/` — these are your checklist definitions. Gitigno
 
 ### Lifecycle
 
-**Init** — lazy. First hook invocation for an unseen session ID initializes the state entry with all items pending. No explicit "create" step.
+**Init** — lazy. First hook invocation for an unseen scope key creates the dir and initializes `state.json` with the start state.
 
 **Cleanup** — polyhook emits `session:stop` when the AI tool ends its session. steplock registers a `session:stop` handler to prune that session's entries from `checklist-state.json`. Prevents unbounded state file growth.
 
@@ -365,26 +365,25 @@ steplock
     ├── scans .steplock/checklists/*/config.toml + flow.mmd
     ├── calls polyhook.read()              ← normalized HookEvent
     ├── evaluates match_input CEL expression (per checklist)
-    ├── loads state file
-    ├── session dir exists? → create .steplock/sessions/<session-id>/ if not
-    ├── write .steplock/sessions/<session-id>/context.json  (current checklist + item)
-    ├── write .steplock/sessions/<session-id>/ack.sh        (generic, only if not exists)
-    ├── write .steplock/sessions/<session-id>/preview.sh    (generic, only if not exists + allow_preview_request)
+    ├── scope dir exists? → create .steplock/sessions/<scope-key>/ if not
+    ├── write .steplock/sessions/<scope-key>/state.json     (current state — updated each block)
+    ├── write .steplock/sessions/<scope-key>/ack.sh         (generic, only if not exists)
+    ├── write .steplock/sessions/<scope-key>/preview.sh     (generic, only if not exists + allow_preview_request)
     ├── pending items?
-    │     yes → calls polyhook.respond(block, message + sh .steplock/sessions/<session-id>/ack.sh)
+    │     yes → calls polyhook.respond(block, message + sh .steplock/sessions/<scope-key>/ack.sh)
     └── no pending items?
           → calls polyhook.respond(approve)
 ```
 
-`.steplock/sessions/<session-id>/context.json` — updated each block by steplock, read by `ack.sh` and `preview.sh`:
+`.steplock/sessions/<scope-key>/state.json` — single source of truth, updated by steplock on each block and by `ack.sh` on each ack:
 
 ```json
 {
-  "session":       "session-abc123",
   "checklist":     "git-push-quality-gate",
   "current_state": "clean_code",
   "next_state":    "test_coverage",
-  "transitions":   ["test_coverage"]
+  "transitions":   ["test_coverage"],
+  "visited":       []
 }
 ```
 
