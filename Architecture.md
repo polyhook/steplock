@@ -58,17 +58,7 @@ Each checklist lives in its own directory under `.steplock/checklists/<name>/`. 
         └── flow.mmd
 ```
 
-**`config.toml`** — trigger and behaviour:
-
-```toml
-#:schema https://raw.githubusercontent.com/polyhook/steplock/main/checklist-config.schema.json
-
-on_event              = "tool:before"
-on_tool               = "bash"
-match_input           = "input.command.contains('git push')"
-reset                 = "session"
-allow_preview_request = true
-```
+**`config.toml`** — trigger and behaviour. See [`schemas/checklist-config.schema.json`](schemas/checklist-config.schema.json).
 
 **`flow.mmd`** — the [Mermaid `stateDiagram-v2`](https://mermaid.js.org/syntax/stateDiagram.html) diagram. State labels are the questions shown to the agent. steplock walks the graph — on each block it shows the label of the current state; on ack it advances to the next state. `[*]` marks start and end.
 
