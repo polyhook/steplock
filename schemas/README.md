@@ -1,37 +1,35 @@
-## Schema
+## Schemas
 
-`checklist-config.schema.json` is the source of truth for `config.toml` shape.
+`checklist-config.schema.json` — shape of `config.toml`.
+`session-state.schema.json` — shape of `.steplock/sessions/<scope-key>/state.json`.
 
-```
-checklist-config.schema.json
-    │
-    └── typify → src/config_types.rs   (Rust structs, generated at build time)
-```
-
-**Compile-time** — generated Rust structs catch unknown fields, wrong enum values, wrong types at startup.
-
-**Editor** — schema published to [SchemaStore](https://www.schemastore.org). `#:schema` hint in `config.toml` activates Taplo validation and autocomplete.
-
-Fields with constrained values become JSON Schema enums:
-
-- `on_event` — `"tool:before" | "tool:after" | "session:start" | "session:stop" | "agent:stop" | "notification"`
-- `on_tool` — all normalized polyhook tool names (sourced from polyhook's `tools.toml`)
-- `reset` — `"session" | "always"`
-
-`match_input` stays `string` — CEL can't be expressed as JSON Schema; parse errors surface at startup. `flow.mmd` is validated by steplock's Mermaid parser at startup.
+Both schemas are read by editor tooling (Taplo, etc.) via the `#:schema` hint — they are not used at runtime.
 
 ---
 
 ## `config.toml` fields
 
-See [`checklist-config.schema.json`](checklist-config.schema.json) — source of truth for all fields, types, and allowed values.
+| Field                  | Type    | Required | Default     | Description |
+| ---------------------- | ------- | -------- | ----------- | ----------- |
+| `on_event`             | string  | yes      | —           | polyhook event type that triggers this checklist |
+| `on_tool`              | string  | yes      | —           | Normalized polyhook tool name to match |
+| `match_input`          | string  | no       | (match all) | CEL expression evaluated against the event |
+| `reset`                | string  | no       | `"session"` | When to reset checklist progress |
+| `allow_preview_request`| boolean | no       | `false`     | Let the agent preview all items before starting |
 
-## `reset` values
+### `on_event` values
 
-| Value     | Behavior                                       |
-| --------- | ---------------------------------------------- |
-| `session` | Resets when `sessionId` changes. Default.      |
-| `always`  | Resets on every new invocation of the trigger. |
+`"tool:before"` `"tool:after"` `"session:start"` `"session:stop"` `"agent:stop"` `"notification"`
+
+### `reset` values
+
+| Value     | Scope key             | State dir                         | Reset when           |
+| --------- | --------------------- | --------------------------------- | -------------------- |
+| `session` | `HookEvent.sessionId` | `.steplock/sessions/<session-id>/`| `session:stop` fires |
+| `branch`  | git branch name       | `.steplock/sessions/<branch>/`    | branch changes       |
+| `always`  | —                     | no dir, no file                   | every invocation     |
+
+---
 
 ## `match_input` expressions
 
@@ -41,13 +39,13 @@ Evaluated by [`cel-interpreter`](https://crates.io/crates/cel-interpreter) — f
 
 ### Variables
 
-| Variable       | Resolves to                                                       |
-| -------------- | ----------------------------------------------------------------- |
+| Variable       | Resolves to                                                        |
+| -------------- | ------------------------------------------------------------------ |
 | `input.<key>`  | Field from `HookEvent.input` — e.g. `input.command`, `input.path` |
-| `output.<key>` | Field from `HookEvent.output` (for `tool:after` events)           |
-| `event.tool`   | Normalized tool name                                              |
-| `event.event`  | Event type                                                        |
-| `event.caller` | Caller kind — `"claude-code"`, `"cursor"`, etc.                   |
+| `output.<key>` | Field from `HookEvent.output` (for `tool:after` events)            |
+| `event.tool`   | Normalized tool name                                               |
+| `event.event`  | Event type                                                         |
+| `event.caller` | Caller kind — `"claude-code"`, `"cursor"`, etc.                    |
 
 ### Examples
 
