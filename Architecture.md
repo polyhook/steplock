@@ -225,19 +225,7 @@ Commit `.steplock/checklists/` — these are your checklist definitions. Gitigno
 
 ## State
 
-Each scope dir contains one `state.json`. It is the single source of truth — read by steplock on each hook invocation, written by `ack.sh` after each acknowledgment.
-
-```json
-{
-  "checklist":     "git-push-quality-gate",
-  "current_state": "clean_code",
-  "next_state":    "test_coverage",
-  "transitions":   ["test_coverage"],
-  "visited":       []
-}
-```
-
-See [`schemas/session-state.schema.json`](schemas/session-state.schema.json) — source of truth for all fields and types.
+Each scope dir contains one `state.json`. It is the single source of truth — read by steplock on each hook invocation, written by `ack.sh` after each acknowledgment. See [`schemas/session-state.schema.json`](schemas/session-state.schema.json).
 
 steplock writes `current_state`, `next_state`, `transitions` each block. `ack.sh` writes `visited` and advances `current_state`.
 
