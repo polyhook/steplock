@@ -5,7 +5,7 @@ edition = "2021"
 description = "Stateful quality gate logic for steplock"
 
 [dependencies]
-polyhook = { path = "../../polyhook/packages/sdk-rust" }
+polyhook = "0.1.5"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 toml = "0.8"

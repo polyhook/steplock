@@ -592,14 +592,18 @@ checksum = "a89322df9ebe1c1578d689c92318e070967d1042b512afbe49518723f4e6d5cd"
 
 [[package]]
 name = "polyhook"
-version = "0.1.0"
+version = "0.1.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7992cd1ec7daafd6f88faa558e591393ad08aa507e58bf43fafa0254393c7e25"
 dependencies = [
  "polyhook-core",
 ]
 
 [[package]]
 name = "polyhook-core"
-version = "0.1.0"
+version = "0.1.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c15e60e7e803a175ca6c8876fd21be5f68b660afa0dfa504850271daa1537c30"
 dependencies = [
  "prettyplease",
  "proc-macro2",
