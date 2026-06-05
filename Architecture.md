@@ -210,23 +210,13 @@ Commit `.steplock/checklists/` — these are your checklist definitions. Gitigno
 
 **Init** — lazy. First hook invocation for an unseen scope key creates the dir and initializes `state.json` with the start state.
 
-**Cleanup** — polyhook emits `session:stop` when the AI tool ends its session. steplock registers a `session:stop` handler to prune that session's entries from `checklist-state.json`. Prevents unbounded state file growth.
-
-### `reset` and state keys
-
-| `reset` | State key | Cleaned up when |
-|---|---|---|
-| `session` | `HookEvent.sessionId` | `session:stop` fires |
-| `branch` | current git branch name | branch changes (checked via `git rev-parse`) |
-| `always` | not persisted — always treated as fresh | — |
-
-`reset = "always"` requires no state file access — every trigger invocation starts from a fully pending checklist.
+**Cleanup** — polyhook emits `session:stop`. steplock removes `.steplock/sessions/<session-id>/`.
 
 ---
 
-## State File
+## State
 
-Written to `.steplock/checklist-state.json` in the project root. Add to `.gitignore`.
+Each scope dir contains one `state.json`. It is the single source of truth — read by steplock on each hook invocation, written by `ack.sh` after each acknowledgment.
 
 ```json
 {
@@ -238,7 +228,9 @@ Written to `.steplock/checklist-state.json` in the project root. Add to `.gitign
 }
 ```
 
-State keyed by checklist name then scope value (session ID or branch name). Tracks current graph node and visited nodes — enough to resume from any point and render progress in `preview.sh`. Each agent reads and writes only its own key. Atomic rename ensures no agent sees a partial write from another.
+See [`schemas/session-state.schema.json`](schemas/session-state.schema.json) — source of truth for all fields and types.
+
+steplock writes `current_state`, `next_state`, `transitions` each block. `ack.sh` writes `visited` and advances `current_state`.
 
 ---
 
@@ -246,8 +238,8 @@ State keyed by checklist name then scope value (session ID or branch name). Trac
 
 When a checklist item is pending, the hook:
 
-1. Writes (or updates) `context.json` in the session dir with the current pending item
-2. Ensures `ack.sh` and `preview.sh` exist in the session dir (written once, never regenerated)
+1. Updates `state.json` in the scope dir with current node, next node, valid transitions
+2. Ensures `ack.sh` and `preview.sh` exist in the scope dir (written once, never regenerated)
 3. Returns a `block` response with the item text and a clean `sh` command
 
 **Linear state** (single outgoing transition) — steplock advances automatically. Block message:
@@ -257,7 +249,7 @@ When finished, run: sh .steplock/sessions/session-abc123/ack.sh
 Then retry your original command.
 ```
 
-**Branching state** (multiple outgoing transitions) — steplock prompts the agent with the available next states and their labels. Agent passes the chosen state name as an argument. Block message:
+**Branching state** (multiple outgoing transitions) — steplock prompts with available next states. Agent passes chosen state as `$1`. Block message:
 
 ```
 Did you increase test coverage by at least a little?
@@ -267,8 +259,6 @@ When finished, run one of:
   sh .steplock/sessions/session-abc123/ack.sh skip_reason     — No, provide reason below
 Then retry your original command.
 ```
-
-`ack.sh` reads `context.json` for the current state; in branching mode it accepts the chosen next state as `$1` and writes it back to `context.json` before updating `checklist-state.json`.
 
 ### `allow_preview_request = false` (default)
 
@@ -340,7 +330,7 @@ Fields with constrained values become JSON Schema enums:
 
 - `on_event` — `"tool:before" | "tool:after" | "session:start" | "session:stop" | "agent:stop" | "notification"`
 - `on_tool` — all normalized polyhook tool names (sourced from polyhook's `tools.toml`)
-- `reset` — `"session" | "always" | "branch"`
+- `reset` — `"session" | "always"`
 
 `match_input` stays `string` — CEL can't be expressed as JSON Schema; parse errors surface at startup. `flow.mmd` is validated by steplock's Mermaid parser at startup.
 
@@ -375,36 +365,21 @@ steplock
           → calls polyhook.respond(approve)
 ```
 
-`.steplock/sessions/<scope-key>/state.json` — single source of truth, updated by steplock on each block and by `ack.sh` on each ack:
+`.steplock/sessions/<scope-key>/state.json` — single source of truth, updated by steplock on each block and by `ack.sh` on each ack. See [`schemas/session-state.schema.json`](schemas/session-state.schema.json).
 
-```json
-{
-  "checklist":     "git-push-quality-gate",
-  "current_state": "clean_code",
-  "next_state":    "test_coverage",
-  "transitions":   ["test_coverage"],
-  "visited":       []
-}
-```
-
-`next_state` is set by steplock for linear states (single outgoing transition). For branching states it is `null` and `transitions` lists all valid next state names — the agent must pass one as `$1` to `ack.sh`. `ack.sh` validates `$1` against `transitions` and exits with an error if invalid.
-
-`.steplock/sessions/<session-id>/ack.sh` — generic, written once per session:
+`.steplock/sessions/<scope-key>/ack.sh` — generic, written once per session:
 
 ```sh
 #!/bin/sh
 DIR="$(cd "$(dirname "$0")" && pwd)"
-STATE=".steplock/checklist-state.json"
+STATE="$DIR/state.json"
 TMP="$STATE.tmp.$$"
 
-CHECKLIST=$(jq -r '.checklist'           "$DIR/context.json")
-SESSION=$(jq -r '.session'               "$DIR/context.json")
-CURRENT=$(jq -r '.current_state'         "$DIR/context.json")
-NEXT=$(jq -r '.next_state // empty'      "$DIR/context.json")
+CURRENT=$(jq -r '.current_state'      "$STATE")
+NEXT=$(jq -r '.next_state // empty'   "$STATE")
 NEXT="${1:-$NEXT}"
 
-# validate against allowed transitions
-VALID=$(jq -r '.transitions[]' "$DIR/context.json")
+VALID=$(jq -r '.transitions[]' "$STATE")
 MATCHED=$(printf '%s\n' $VALID | grep -Fx "$NEXT")
 
 if [ -z "$MATCHED" ]; then
@@ -414,9 +389,10 @@ if [ -z "$MATCHED" ]; then
   exit 1
 fi
 
-jq --arg c "$CHECKLIST" --arg s "$SESSION" --arg cur "$CURRENT" --arg next "$NEXT" '
-  .[$c][$s].visited      += [$cur] |
-  .[$c][$s].current_state = $next
+jq --arg cur "$CURRENT" --arg next "$NEXT" '
+  .visited      += [$cur] |
+  .current_state = $next  |
+  .next_state    = null
 ' "$STATE" > "$TMP" && mv "$TMP" "$STATE"
 ```
 

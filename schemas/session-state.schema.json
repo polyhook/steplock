@@ -1,0 +1,34 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://raw.githubusercontent.com/polyhook/steplock/main/session-state.schema.json",
+  "title": "steplock session state",
+  "description": "Runtime state for one checklist scope (.steplock/sessions/<scope-key>/state.json).",
+  "type": "object",
+  "required": ["checklist", "current_state", "transitions", "visited"],
+  "additionalProperties": false,
+  "properties": {
+    "checklist": {
+      "type": "string",
+      "description": "Identifier of the checklist this scope is tracking (matches the directory name under .steplock/checklists/)."
+    },
+    "current_state": {
+      "type": "string",
+      "description": "Name of the Mermaid state node currently being gated. Written by steplock on each block; advanced by ack.sh on each acknowledgment."
+    },
+    "next_state": {
+      "type": ["string", "null"],
+      "description": "Auto-advance target for linear states (single outgoing transition). null for branching states — agent must pass the chosen state as $1 to ack.sh."
+    },
+    "transitions": {
+      "type": "array",
+      "description": "Valid next state names from current_state. ack.sh validates $1 against this list.",
+      "items": { "type": "string" },
+      "minItems": 1
+    },
+    "visited": {
+      "type": "array",
+      "description": "State node names already acknowledged this scope. Written by ack.sh.",
+      "items": { "type": "string" }
+    }
+  }
+}
