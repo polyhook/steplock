@@ -1,6 +1,6 @@
 #:schema https://raw.githubusercontent.com/polyhook/steplock/refs/heads/main/schemas/checklist-config.schema.json
 on_event = "tool:before"
 on_tool = "bash"
-match_input = "input.command.contains('git commit')"
+match_input = "input.command_words.exists(x, x == 'commit')"
 reset = "session"
 allow_preview_request = true

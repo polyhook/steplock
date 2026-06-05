@@ -33,7 +33,7 @@ pub fn matches_event(event: &HookEvent, expr: &Option<String>) -> Result<bool> {
     )
     .unwrap();
 
-    ctx.add_variable("input", json_obj_to_cel(&event.input))
+    ctx.add_variable("input", input_with_words(&event.input))
         .unwrap();
     ctx.add_variable("output", json_obj_to_cel(&event.output))
         .unwrap();
@@ -44,6 +44,28 @@ pub fn matches_event(event: &HookEvent, expr: &Option<String>) -> Result<bool> {
     })?;
 
     Ok(is_truthy(&result))
+}
+
+/// Builds the `input` CEL map from event input, adding `command_words` when `command` is present.
+///
+/// `command_words` is a list of whitespace-split tokens, allowing expressions like
+/// `input.command_words.exists(x, x == 'push')` to match subcommands without false positives
+/// from file paths or commit messages.
+fn input_with_words(obj: &HashMap<String, serde_json::Value>) -> Value {
+    let mut map: HashMap<Key, Value> = obj
+        .iter()
+        .map(|(k, v)| (Key::String(Arc::new(k.clone())), json_to_cel(v)))
+        .collect();
+
+    if let Some(serde_json::Value::String(cmd)) = obj.get("command") {
+        let words: Vec<Value> = cmd.split_whitespace().map(cel_str).collect();
+        map.insert(
+            Key::String(Arc::new("command_words".to_owned())),
+            Value::List(Arc::new(words)),
+        );
+    }
+
+    Value::Map(Map { map: Arc::new(map) })
 }
 
 fn cel_str(s: &str) -> Value {
@@ -292,5 +314,45 @@ mod tests {
         // CEL `null` literal returns Value::Null → falsy
         let ev = event_with_cmd("ls");
         assert!(!matches_event(&ev, &Some("null".to_owned())).unwrap());
+    }
+
+    #[test]
+    fn command_words_matches_push_subcommand() {
+        let ev = event_with_cmd("git -C /some/path push origin main");
+        assert!(matches_event(
+            &ev,
+            &Some("input.command_words.exists(x, x == 'push')".to_owned())
+        )
+        .unwrap());
+    }
+
+    #[test]
+    fn command_words_does_not_match_path_containing_push() {
+        let ev = event_with_cmd("git add .steplock/checklists/pre-push/config.toml");
+        assert!(!matches_event(
+            &ev,
+            &Some("input.command_words.exists(x, x == 'push')".to_owned())
+        )
+        .unwrap());
+    }
+
+    #[test]
+    fn command_words_matches_commit_with_dash_c_flag() {
+        let ev = event_with_cmd("git -C /repo commit -m \"fix bug\"");
+        assert!(matches_event(
+            &ev,
+            &Some("input.command_words.exists(x, x == 'commit')".to_owned())
+        )
+        .unwrap());
+    }
+
+    #[test]
+    fn command_words_does_not_match_path_containing_commit() {
+        let ev = event_with_cmd("git add .steplock/checklists/pre-commit/config.toml");
+        assert!(!matches_event(
+            &ev,
+            &Some("input.command_words.exists(x, x == 'commit')".to_owned())
+        )
+        .unwrap());
     }
 }
