@@ -1,0 +1,11 @@
+stateDiagram-v2
+    [*] --> clean_code
+    clean_code --> test_coverage
+    test_coverage --> documentation
+    documentation --> no_secrets
+    no_secrets --> [*]
+
+    clean_code   : Did you write clean, readable code?
+    test_coverage: Did you increase test coverage by at least a little?
+    documentation: Did you update relevant documentation?
+    no_secrets   : Did you check for hardcoded secrets or credentials?
