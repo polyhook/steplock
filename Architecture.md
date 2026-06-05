@@ -106,10 +106,10 @@ See [`schemas/checklist-config.schema.json`](schemas/checklist-config.schema.jso
 
 ### `reset` values
 
-| Value | Behavior |
-|---|---|
-| `session` | Resets when `sessionId` changes. Default. |
-| `always` | Resets on every new invocation of the trigger. |
+| Value     | Behavior                                       |
+| --------- | ---------------------------------------------- |
+| `session` | Resets when `sessionId` changes. Default.      |
+| `always`  | Resets on every new invocation of the trigger. |
 
 ### `match_input` expressions
 
@@ -119,13 +119,13 @@ Evaluated by [`cel-interpreter`](https://crates.io/crates/cel-interpreter) — f
 
 #### Variables
 
-| Variable | Resolves to |
-|---|---|
-| `input.<key>` | Field from `HookEvent.input` — e.g. `input.command`, `input.path` |
-| `output.<key>` | Field from `HookEvent.output` (for `tool:after` events) |
-| `event.tool` | Normalized tool name |
-| `event.event` | Event type |
-| `event.caller` | Caller kind — `"claude-code"`, `"cursor"`, etc. |
+| Variable       | Resolves to                                                       |
+| -------------- | ----------------------------------------------------------------- |
+| `input.<key>`  | Field from `HookEvent.input` — e.g. `input.command`, `input.path` |
+| `output.<key>` | Field from `HookEvent.output` (for `tool:after` events)           |
+| `event.tool`   | Normalized tool name                                              |
+| `event.event`  | Event type                                                        |
+| `event.caller` | Caller kind — `"claude-code"`, `"cursor"`, etc.                   |
 
 #### Examples
 
@@ -195,10 +195,10 @@ Commit `.steplock/checklists/` — these are your checklist definitions. Gitigno
 
 ### Scope key by `reset`
 
-| `reset` | Scope key | Dir | Cleaned up when |
-|---|---|---|---|
+| `reset`   | Scope key             | Dir                                | Cleaned up when      |
+| --------- | --------------------- | ---------------------------------- | -------------------- |
 | `session` | `HookEvent.sessionId` | `.steplock/sessions/<session-id>/` | `session:stop` fires |
-| `always` | — | no dir, no file | — |
+| `always`  | —                     | no dir, no file                    | —                    |
 
 `reset = "always"` requires no state at all — every trigger invocation starts fresh.
 
@@ -363,26 +363,27 @@ Or embed as a library and call `steplock::run()` before your own logic.
 
 Ships as a standalone CLI binary (works with any language) and as a native library for each polyhook SDK language.
 
-| Distribution | Usage |
-|---|---|
-| CLI binary | Drop-in hook script, zero code required |
-| Rust crate | `steplock` — embed in existing hook binary |
-| TypeScript | `@steplock/sdk` — wrap your hook handler |
-| Go | `github.com/polyhook/steplock` |
-| Python | `steplock` |
-| C# | `Steplock` |
+| Distribution | Usage                                      |
+| ------------ | ------------------------------------------ |
+| CLI binary   | Drop-in hook script, zero code required    |
+| Rust crate   | `steplock` — embed in existing hook binary |
+| TypeScript   | `@steplock/sdk` — wrap your hook handler   |
+| Go           | `github.com/polyhook/steplock`             |
+| Python       | `steplock`                                 |
+| C#           | `Steplock`                                 |
 
 ---
 
 ## Relation to polyhook
 
-| | polyhook | steplock |
-|---|---|---|
-| Scope | Normalize hook events across tools | Gate actions behind stateful checklists |
-| State | Stateless | Stateful (disk-backed) |
-| Config | None | `steplock.toml` |
-| Layer | Core SDK | Built on top of polyhook |
-| WASM | Yes — detection + serde | No — pure host logic |
+|        | polyhook                           | steplock                                |
+| ------ | ---------------------------------- | --------------------------------------- |
+| Scope  | Normalize hook events across tools | Gate actions behind stateful checklists |
+| State  | Stateless                          | Stateful (disk-backed)                  |
+| Config | None                               | `steplock.toml`                         |
+| Layer  | Core SDK                           | Built on top of polyhook                |
+| WASM   | Yes — detection + serde            | No — pure host logic                    |
+
 ### Multiple checklists on the same event
 
 When two `[[checklist]]` blocks both match the same event, steplock processes them in declaration order. The first incomplete checklist blocks. Once it reaches `[*]`, the next checklist's first state blocks on the subsequent invocation.
