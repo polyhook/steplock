@@ -120,7 +120,7 @@ code --install-extension bierner.markdown-mermaid
 | `on_event` | string | polyhook event type (`tool:before`, `tool:after`, etc.) |
 | `on_tool` | string | Normalized polyhook tool name (`bash`, `write_file`, etc.) |
 | `match_input` | string | Optional filter expression — see [`match_input` expressions](#match_input-expressions) |
-| `reset` | string | When to reset progress — `session`, `always`, `branch` |
+| `reset` | string | When to reset progress — `session`, `always` |
 | `allow_preview_request` | bool | Let agent request the full checklist before starting. Default `false`. |
 
 ### `reset` values
@@ -129,7 +129,6 @@ code --install-extension bierner.markdown-mermaid
 |---|---|
 | `session` | Resets when `sessionId` changes. Default. |
 | `always` | Resets on every new invocation of the trigger. |
-| `branch` | Resets when the current git branch changes. |
 
 ### `match_input` expressions
 
@@ -191,14 +190,13 @@ Multiple agents can work on the same repo simultaneously. Two problems must be s
 │       └── flow.mmd
 ├── sessions/
 │   ├── session-abc123/
-│   │   ├── ack.sh        (generic script, reads context.json)
-│   │   ├── preview.sh    (generic script, reads context.json)
-│   │   └── context.json  (current state — updated each block)
+│   │   ├── ack.sh
+│   │   ├── preview.sh
+│   │   └── state.json
 │   └── session-def456/
 │       ├── ack.sh
 │       ├── preview.sh
-│       └── context.json
-├── checklist-state.json  (atomic writes via temp + rename)
+│       └── state.json
 └── audit.log
 ```
 
@@ -238,16 +236,11 @@ Written to `.steplock/checklist-state.json` in the project root. Add to `.gitign
 
 ```json
 {
-  "git-push-quality-gate": {
-    "session-abc123": {
-      "current_state": "test_coverage",
-      "visited": ["clean_code"]
-    },
-    "session-def456": {
-      "current_state": "clean_code",
-      "visited": []
-    }
-  }
+  "checklist":     "git-push-quality-gate",
+  "current_state": "clean_code",
+  "next_state":    "test_coverage",
+  "transitions":   ["test_coverage"],
+  "visited":       []
 }
 ```
 

@@ -1,0 +1,51 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://raw.githubusercontent.com/polyhook/steplock/main/checklist-config.schema.json",
+  "title": "steplock checklist config",
+  "description": "Configuration for a steplock checklist gate (config.toml).",
+  "type": "object",
+  "required": ["on_event", "on_tool"],
+  "additionalProperties": false,
+  "properties": {
+    "on_event": {
+      "type": "string",
+      "description": "polyhook event type that triggers this checklist.",
+      "enum": [
+        "tool:before",
+        "tool:after",
+        "session:start",
+        "session:stop",
+        "agent:stop",
+        "notification"
+      ]
+    },
+    "on_tool": {
+      "type": "string",
+      "description": "Normalized polyhook tool name to match (e.g. 'bash', 'write_file').",
+      "examples": ["bash", "write_file", "read_file", "list_directory"]
+    },
+    "match_input": {
+      "type": "string",
+      "description": "Optional CEL expression evaluated against the hook event. Omit to match all invocations of on_event + on_tool. Available variables: input.<key>, output.<key>, event.tool, event.event, event.caller.",
+      "examples": [
+        "input.command.contains('git push')",
+        "input.command.contains('git push') && !input.command.contains('--dry-run')",
+        "input.command.matches('^git (push|tag)')",
+        "input.path.startsWith('/etc')",
+        "event.caller != 'claude-code'",
+        "event.caller in ['cursor', 'windsurf']"
+      ]
+    },
+    "reset": {
+      "type": "string",
+      "description": "When to reset checklist progress. Defaults to 'session'.",
+      "enum": ["session", "always", "branch"],
+      "default": "session"
+    },
+    "allow_preview_request": {
+      "type": "boolean",
+      "description": "Let the agent run preview.sh to see all checklist items before starting. Defaults to false.",
+      "default": false
+    }
+  }
+}
