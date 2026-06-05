@@ -98,10 +98,7 @@ stateDiagram-v2
 
 **`flow.mmd`** — `.mmd` extension gives Mermaid syntax highlighting and diagram preview in VS Code via the [Mermaid Preview](https://marketplace.visualstudio.com/items?itemName=bierner.markdown-mermaid) extension.
 
-```sh
-code --install-extension tamasfe.even-better-toml
-code --install-extension bierner.markdown-mermaid
-```
+Both extensions are listed in [`.vscode/extensions.json`](.vscode/extensions.json) — VS Code will prompt to install them on repo open.
 
 ### `config.toml` fields
 
