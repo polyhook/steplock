@@ -204,7 +204,16 @@ Commit `.steplock/checklists/` — these are your checklist definitions. Gitigno
 
 `HookEvent.sessionId` — polyhook inherits it from the AI tool (Claude Code, Cursor, etc.). steplock never generates session IDs for known callers.
 
-**Fallback for unknown callers** — if `sessionId` is empty, steplock generates a UUID on first invocation and writes it to `.steplock/session`. Subsequent hook calls in the same agent lineage read it back.
+**Fallback for unknown callers** — if `sessionId` is empty, steplock generates a UUID on first invocation and writes it to `.steplock/sessions/fallback-id`. Subsequent hook calls in the same agent lineage read it back.
+
+### Scope key by `reset`
+
+| `reset` | Scope key | Dir | Cleaned up when |
+|---|---|---|---|
+| `session` | `HookEvent.sessionId` | `.steplock/sessions/<session-id>/` | `session:stop` fires |
+| `always` | — | no dir, no file | — |
+
+`reset = "always"` requires no state at all — every trigger invocation starts fresh.
 
 ### Lifecycle
 
