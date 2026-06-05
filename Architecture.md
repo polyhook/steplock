@@ -115,13 +115,7 @@ code --install-extension bierner.markdown-mermaid
 
 ### `config.toml` fields
 
-| Field | Type | Description |
-|---|---|---|
-| `on_event` | string | polyhook event type (`tool:before`, `tool:after`, etc.) |
-| `on_tool` | string | Normalized polyhook tool name (`bash`, `write_file`, etc.) |
-| `match_input` | string | Optional filter expression — see [`match_input` expressions](#match_input-expressions) |
-| `reset` | string | When to reset progress — `session`, `always` |
-| `allow_preview_request` | bool | Let agent request the full checklist before starting. Default `false`. |
+See [`schemas/checklist-config.schema.json`](schemas/checklist-config.schema.json) — source of truth for all fields, types, and allowed values.
 
 ### `reset` values
 
