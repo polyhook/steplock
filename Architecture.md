@@ -141,30 +141,6 @@ Use `allow_preview_request = true` when checklist items are interdependent and t
 
 ---
 
-## Schema
-
-`checklist-config.schema.json` is the source of truth for `config.toml` shape.
-
-```
-checklist-config.schema.json
-    │
-    └── typify → src/config_types.rs   (Rust structs, generated at build time)
-```
-
-**Compile-time** — generated Rust structs catch unknown fields, wrong enum values, wrong types at startup.
-
-**Editor** — schema published to [SchemaStore](https://www.schemastore.org). `#:schema` hint in `config.toml` activates Taplo validation and autocomplete.
-
-Fields with constrained values become JSON Schema enums:
-
-- `on_event` — `"tool:before" | "tool:after" | "session:start" | "session:stop" | "agent:stop" | "notification"`
-- `on_tool` — all normalized polyhook tool names (sourced from polyhook's `tools.toml`)
-- `reset` — `"session" | "always"`
-
-`match_input` stays `string` — CEL can't be expressed as JSON Schema; parse errors surface at startup. `flow.mmd` is validated by steplock's Mermaid parser at startup.
-
----
-
 ## Architecture
 
 steplock is a separate project that wraps the polyhook SDK. It does not modify polyhook's `core` or WASM module.
