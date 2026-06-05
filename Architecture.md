@@ -376,34 +376,7 @@ steplock
 
 `.steplock/sessions/<scope-key>/state.json` — single source of truth, updated by steplock on each block and by `ack.sh` on each ack. See [`schemas/session-state.schema.json`](schemas/session-state.schema.json).
 
-`.steplock/sessions/<scope-key>/ack.sh` — generic, written once per session:
-
-```sh
-#!/bin/sh
-DIR="$(cd "$(dirname "$0")" && pwd)"
-STATE="$DIR/state.json"
-TMP="$STATE.tmp.$$"
-
-CURRENT=$(jq -r '.current_state'      "$STATE")
-NEXT=$(jq -r '.next_state // empty'   "$STATE")
-NEXT="${1:-$NEXT}"
-
-VALID=$(jq -r '.transitions[]' "$STATE")
-MATCHED=$(printf '%s\n' $VALID | grep -Fx "$NEXT")
-
-if [ -z "$MATCHED" ]; then
-  echo "steplock: invalid next state '$NEXT'" >&2
-  echo "Valid transitions from '$CURRENT':" >&2
-  printf '%s\n' $VALID | sed 's/^/  /' >&2
-  exit 1
-fi
-
-jq --arg cur "$CURRENT" --arg next "$NEXT" '
-  .visited      += [$cur] |
-  .current_state = $next  |
-  .next_state    = null
-' "$STATE" > "$TMP" && mv "$TMP" "$STATE"
-```
+`.steplock/sessions/<scope-key>/ack.sh` — generic, written once per session. See [`scripts/ack.sh`](scripts/ack.sh).
 
 Requires `jq`. Atomic write via temp + `mv` (PID-suffixed temp name avoids collision between concurrent agents).
 
