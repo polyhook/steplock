@@ -43,6 +43,7 @@ Commit `.steplock/checklists/` — these are your checklist definitions. Gitigno
 | `reset`   | Scope key             | Dir                                | Cleaned up when      |
 | --------- | --------------------- | ---------------------------------- | -------------------- |
 | `session` | `HookEvent.sessionId` | `.steplock/sessions/<session-id>/` | `session:stop` fires |
+| `branch`  | git branch name       | `.steplock/sessions/<branch>/`     | branch changes       |
 | `always`  | —                     | no dir, no file                    | —                    |
 
 `reset = "always"` requires no state at all — every trigger invocation starts fresh.
@@ -190,6 +191,23 @@ Or embed as a library and call `steplock::run()` before your own logic.
 | Layer  | Core SDK                           | Built on top of polyhook                |
 | WASM   | Yes — detection + serde            | No — pure host logic                    |
 
+---
+
+## Decisions
+
+### Checklist output
+
+steplock writes to two channels that don't touch the hook stdin/stdout protocol:
+
+- **Stderr** — one progress line per event (block issued, ack received, approved). Visible to the human watching the terminal in real time.
+- **`.steplock/audit.log`** — append-only JSONL, one event per line. Useful in CI where no human watches stderr.
+
+```jsonl
+{"event":"block","checklist":"git-push-quality-gate","state":"clean_code","session":"session-abc123","ts":"2026-06-05T10:00:00Z"}
+{"event":"ack","checklist":"git-push-quality-gate","state":"clean_code","session":"session-abc123","ts":"2026-06-05T10:01:12Z"}
+{"event":"approved","checklist":"git-push-quality-gate","session":"session-abc123","ts":"2026-06-05T10:03:45Z"}
+```
+
 ### Multiple checklists on the same event
 
 When two `[[checklist]]` blocks both match the same event, steplock processes them in declaration order. The first incomplete checklist blocks. Once it reaches `[*]`, the next checklist's first state blocks on the subsequent invocation.
@@ -204,5 +222,8 @@ steplock: nothing to acknowledge for 'git-push-quality-gate' (session already co
 
 ---
 
-## Open Questions
+## Behaviour Notes
 
+**Flow changes mid-session** — if `flow.mmd` is updated while an agent has an active session, `current_state` may no longer exist in the new diagram. steplock detects this via empty transitions (the current state has no outgoing edges in the updated graph) and skips the checklist silently rather than erroring. The session remains in the old state file; on the next invocation the updated flow applies.
+
+**Preview for branching flows** — `preview.sh` prints a flat ordered list of checklist items. For branching flows, the list reflects the topological order of all states; branch alternatives appear as siblings without hierarchy markers. Items already visited are shown as `[x]`.

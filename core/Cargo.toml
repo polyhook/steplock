@@ -1,0 +1,23 @@
+[package]
+name = "steplock-core"
+version = "0.1.0"
+edition = "2021"
+description = "Stateful quality gate logic for steplock"
+
+[dependencies]
+polyhook = { path = "../../polyhook/packages/sdk-rust" }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+toml = "0.8"
+cel-interpreter = "0.8"
+glob = "0.3"
+uuid = { version = "1", features = ["v4"] }
+thiserror = "1"
+chrono = { version = "0.4", features = ["serde"] }
+
+[[bin]]
+name = "steplock"
+path = "src/bin/main.rs"
+
+[dev-dependencies]
+tempfile = "3"
