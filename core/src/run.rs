@@ -104,9 +104,12 @@ pub fn run(event: &HookEvent, repo_root: &Path) -> Result<HookResponse> {
                 return Ok(HookResponse::Block { message });
             }
 
-            Reset::Session | Reset::Branch => {
-                let scope_key = get_scope_key(event, &config.reset, &steplock_dir)?;
-                let session_dir = steplock_dir.join("sessions").join(&scope_key);
+            Reset::Session => {
+                let scope_key = get_scope_key(event, &steplock_dir)?;
+                let session_dir = steplock_dir
+                    .join("sessions")
+                    .join(&scope_key)
+                    .join(&checklist_name);
                 fs::create_dir_all(&session_dir)?;
 
                 let state_path = session_dir.join("state.json");
@@ -116,8 +119,10 @@ pub fn run(event: &HookEvent, repo_root: &Path) -> Result<HookResponse> {
                     init_state(&checklist_name, initial_state)
                 };
 
-                // Skip if this checklist is complete
+                // Checklist complete — approve this attempt and reset state so the
+                // next invocation starts the checklist fresh.
                 if state.is_complete() {
+                    save_state(&state_path, &init_state(&checklist_name, initial_state))?;
                     continue;
                 }
 
@@ -169,47 +174,20 @@ pub fn run(event: &HookEvent, repo_root: &Path) -> Result<HookResponse> {
     Ok(HookResponse::Approve)
 }
 
-fn get_scope_key(event: &HookEvent, reset: &Reset, steplock_dir: &Path) -> Result<String> {
-    match reset {
-        Reset::Branch => {
-            // Use git branch name as scope key
-            let branch = read_git_branch(steplock_dir);
-            Ok(branch.unwrap_or_else(|| "unknown-branch".to_owned()))
-        }
-        _ => {
-            // Session-based scope
-            if !event.session_id.is_empty() {
-                return Ok(event.session_id.clone());
-            }
-            // Fallback: generate/read a UUID
-            let fallback_path = steplock_dir.join("sessions").join("fallback-id");
-            if fallback_path.exists() {
-                let id = fs::read_to_string(&fallback_path)?;
-                return Ok(id.trim().to_owned());
-            }
-            let id = uuid::Uuid::new_v4().to_string();
-            fs::create_dir_all(fallback_path.parent().unwrap())?;
-            fs::write(&fallback_path, &id)?;
-            Ok(id)
-        }
+fn get_scope_key(event: &HookEvent, steplock_dir: &Path) -> Result<String> {
+    if !event.session_id.is_empty() {
+        return Ok(event.session_id.clone());
     }
-}
-
-fn read_git_branch(steplock_dir: &Path) -> Option<String> {
-    // Walk up from steplock_dir to find .git/HEAD
-    let mut dir = steplock_dir.parent()?;
-    loop {
-        let head = dir.join(".git").join("HEAD");
-        if head.exists() {
-            let content = fs::read_to_string(&head).ok()?;
-            let branch = content
-                .strip_prefix("ref: refs/heads/")
-                .map(|s| s.trim().to_owned())
-                .or_else(|| Some(content.trim()[..8.min(content.trim().len())].to_owned()))?;
-            return Some(branch);
-        }
-        dir = dir.parent()?;
+    // Fallback: generate/read a UUID
+    let fallback_path = steplock_dir.join("sessions").join("fallback-id");
+    if fallback_path.exists() {
+        let id = fs::read_to_string(&fallback_path)?;
+        return Ok(id.trim().to_owned());
     }
+    let id = uuid::Uuid::new_v4().to_string();
+    fs::create_dir_all(fallback_path.parent().unwrap())?;
+    fs::write(&fallback_path, &id)?;
+    Ok(id)
 }
 
 fn build_block_message(
@@ -330,12 +308,12 @@ reset = "session"
     }
 
     #[test]
-    fn approves_after_all_states_visited() {
+    fn approves_and_resets_state_when_complete() {
         let tmp = TempDir::new().unwrap();
         setup_checklist(tmp.path());
 
-        // Manually create state.json already at [*]
-        let session_dir = tmp.path().join(".steplock/sessions/sess-1");
+        // State at [*] = checklist complete from a prior ack sequence
+        let session_dir = tmp.path().join(".steplock/sessions/sess-1/quality-gate");
         fs::create_dir_all(&session_dir).unwrap();
         let state = SessionState {
             checklist: "quality-gate".to_owned(),
@@ -346,9 +324,15 @@ reset = "session"
         };
         save_state(&session_dir.join("state.json"), &state).unwrap();
 
+        // This attempt is approved (checklist was already satisfied)
         let event = make_event("tool:before", "bash", "git push origin main", "sess-1");
         let resp = run(&event, tmp.path()).unwrap();
         assert!(matches!(resp, HookResponse::Approve));
+
+        // State is now reset so the NEXT attempt starts fresh
+        let next_state = load_state(&session_dir.join("state.json")).unwrap();
+        assert_eq!(next_state.current_state, "clean_code");
+        assert!(next_state.visited.is_empty());
     }
 
     #[test]
@@ -560,78 +544,6 @@ reset = "session"
     }
 
     #[test]
-    fn reset_branch_uses_git_branch_as_scope() {
-        let tmp = TempDir::new().unwrap();
-        let cl_dir = tmp.path().join(".steplock/checklists/branch-gate");
-        fs::create_dir_all(&cl_dir).unwrap();
-        fs::write(
-            cl_dir.join("config.toml"),
-            r#"on_event = "tool:before"
-on_tool = "bash"
-match_input = "input.command.contains('git push')"
-reset = "branch"
-"#,
-        )
-        .unwrap();
-        fs::write(
-            cl_dir.join("flow.mmd"),
-            r#"stateDiagram-v2
-    [*] --> check
-    check --> [*]
-    check: Did you check?
-"#,
-        )
-        .unwrap();
-
-        // Create a fake .git/HEAD so read_git_branch returns a branch name
-        let git_dir = tmp.path().join(".git");
-        fs::create_dir_all(&git_dir).unwrap();
-        fs::write(git_dir.join("HEAD"), "ref: refs/heads/feature-branch\n").unwrap();
-
-        let event = make_event("tool:before", "bash", "git push origin main", "sess-b");
-        let resp = run(&event, tmp.path()).unwrap();
-        assert!(matches!(resp, HookResponse::Block { .. }));
-
-        // Scope dir should use branch name
-        let scope_dir = tmp.path().join(".steplock/sessions/feature-branch");
-        assert!(scope_dir.exists());
-    }
-
-    #[test]
-    fn reset_branch_fallback_when_no_git() {
-        let tmp = TempDir::new().unwrap();
-        let cl_dir = tmp.path().join(".steplock/checklists/branch-gate2");
-        fs::create_dir_all(&cl_dir).unwrap();
-        fs::write(
-            cl_dir.join("config.toml"),
-            r#"on_event = "tool:before"
-on_tool = "bash"
-match_input = "input.command.contains('git push')"
-reset = "branch"
-"#,
-        )
-        .unwrap();
-        fs::write(
-            cl_dir.join("flow.mmd"),
-            r#"stateDiagram-v2
-    [*] --> check
-    check --> [*]
-    check: Did you check?
-"#,
-        )
-        .unwrap();
-
-        // No .git dir — falls back to "unknown-branch"
-        let event = make_event("tool:before", "bash", "git push origin main", "sess-nb");
-        let resp = run(&event, tmp.path()).unwrap();
-        assert!(matches!(resp, HookResponse::Block { .. }));
-        assert!(tmp
-            .path()
-            .join(".steplock/sessions/unknown-branch")
-            .exists());
-    }
-
-    #[test]
     fn reset_always_with_branching_flow_shows_no_next_state() {
         let tmp = TempDir::new().unwrap();
         let cl_dir = tmp.path().join(".steplock/checklists/always-branch");
@@ -676,7 +588,9 @@ reset = "always"
         setup_checklist(tmp.path());
 
         // Inject a state.json with a current_state not in flow
-        let session_dir = tmp.path().join(".steplock/sessions/sess-stale");
+        let session_dir = tmp
+            .path()
+            .join(".steplock/sessions/sess-stale/quality-gate");
         fs::create_dir_all(&session_dir).unwrap();
         let state = SessionState {
             checklist: "quality-gate".to_owned(),

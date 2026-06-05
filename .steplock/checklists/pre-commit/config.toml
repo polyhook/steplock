@@ -2,5 +2,5 @@
 on_event = "tool:before"
 on_tool = "bash"
 match_input = "input.command.contains('git commit')"
-reset = "branch"
+reset = "session"
 allow_preview_request = true

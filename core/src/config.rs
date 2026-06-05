@@ -6,7 +6,6 @@ pub enum Reset {
     #[default]
     Session,
     Always,
-    Branch,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -66,20 +65,6 @@ allow_preview_request = true
         assert_eq!(cfg.match_input.unwrap(), "input.path.startsWith('/etc')");
         assert!(matches!(cfg.reset, Reset::Always));
         assert!(cfg.allow_preview_request);
-    }
-
-    #[test]
-    fn parses_branch_reset() {
-        let cfg = parse_config(
-            "test.toml",
-            r#"
-on_event = "tool:before"
-on_tool  = "bash"
-reset = "branch"
-"#,
-        )
-        .unwrap();
-        assert!(matches!(cfg.reset, Reset::Branch));
     }
 
     #[test]
