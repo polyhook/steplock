@@ -1,0 +1,9 @@
+{
+  "checklist": "git-push-quality-gate",
+  "current_state": "clean_code",
+  "next_state": "test_coverage",
+  "transitions": [
+    "test_coverage"
+  ],
+  "visited": []
+}
