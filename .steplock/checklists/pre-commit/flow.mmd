@@ -1,0 +1,21 @@
+%% Domain-Driven Design (DDD) gate
+%%
+%% Core DDD principles enforced here:
+%%   - Ubiquitous Language: names must come from the domain model, not the implementation layer
+%%   - Bounded Context: each module owns its domain concepts; no leaking across context boundaries
+%%   - Strategic Design: avoid anemic models, god objects, and generic catch-all names
+%%
+%% Bad examples: UserManager, DataProcessor, InfoHelper, utils.rs, do_thing(), handle()
+%% Good examples: ChecklistGate, SessionState, HookEvent, cel_eval.rs, advance_state(), block_push()
+
+stateDiagram-v2
+    [*] --> domain_names
+    domain_names --> no_generic_names
+    no_generic_names --> bounded_context
+    bounded_context --> no_utils_folders
+    no_utils_folders --> [*]
+
+    domain_names    : Do all new files and modules use domain language (not technical jargon like `manager`, `handler`, `utils`)?
+    no_generic_names: Are all new functions and types named after what they mean in the domain (no `data`, `info`, `stuff`, `process`, `do_thing`)?
+    bounded_context : Does each changed module stay within its bounded context — no cross-domain leakage or god objects?
+    no_utils_folders: Are new files placed in a domain module (e.g. `checklist/`, `session/`) and NOT in a catch-all folder like `utils/`, `helpers/`, `common/`, or `shared/`?
