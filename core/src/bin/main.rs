@@ -1,4 +1,5 @@
 use std::env;
+use std::fs;
 use std::io::Read;
 use std::path::{Path, PathBuf};
 use std::process;
@@ -6,6 +7,23 @@ use std::process;
 use steplock_core::{run, HookEvent, HookResponse};
 
 fn main() {
+    let args: Vec<String> = env::args().collect();
+
+    match args.get(1).map(String::as_str) {
+        Some("--version") | Some("-V") => {
+            println!("steplock {}", env!("CARGO_PKG_VERSION"));
+            return;
+        }
+        Some("init") => {
+            if let Err(e) = run_init(&env::current_dir().unwrap()) {
+                eprintln!("steplock: init failed: {e}");
+                process::exit(1);
+            }
+            return;
+        }
+        _ => {}
+    }
+
     let repo_root = find_repo_root_from(&env::current_dir().unwrap())
         .unwrap_or_else(|| env::current_dir().unwrap());
 
@@ -21,6 +39,24 @@ fn main() {
         eprintln!("steplock: failed to write response: {e}");
         process::exit(2);
     }
+}
+
+/// Create `.steplock/checklists/` and a `.steplock/.gitignore` in `dir`.
+fn run_init(dir: &Path) -> std::io::Result<()> {
+    let checklists_dir = dir.join(".steplock").join("checklists");
+    if checklists_dir.exists() {
+        println!("steplock: .steplock/checklists/ already exists");
+        return Ok(());
+    }
+    fs::create_dir_all(&checklists_dir)?;
+    fs::write(
+        dir.join(".steplock").join(".gitignore"),
+        "sessions/\naudit.log\n",
+    )?;
+    println!("steplock: initialized .steplock/checklists/");
+    println!("Next: create a checklist in .steplock/checklists/<name>/");
+    println!("      with config.toml and flow.mmd.");
+    Ok(())
 }
 
 /// Parse the hook event from `reader`, run the gate, and return the polyhook response.
@@ -201,5 +237,23 @@ reset = "session"
         let tmp = TempDir::new().unwrap();
         let result = find_repo_root_from(tmp.path());
         assert!(result.is_none());
+    }
+
+    #[test]
+    fn init_creates_checklists_dir_and_gitignore() {
+        let tmp = TempDir::new().unwrap();
+        run_init(tmp.path()).unwrap();
+        assert!(tmp.path().join(".steplock/checklists").is_dir());
+        let gitignore = fs::read_to_string(tmp.path().join(".steplock/.gitignore")).unwrap();
+        assert!(gitignore.contains("sessions/"));
+        assert!(gitignore.contains("audit.log"));
+    }
+
+    #[test]
+    fn init_is_idempotent_when_checklists_exists() {
+        let tmp = TempDir::new().unwrap();
+        fs::create_dir_all(tmp.path().join(".steplock/checklists")).unwrap();
+        // Second call should not error
+        run_init(tmp.path()).unwrap();
     }
 }
