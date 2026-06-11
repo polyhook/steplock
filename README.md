@@ -4,6 +4,8 @@
 
 steplock sits on top of the [polyhook](https://github.com/tupe12334/polyhook) SDK. It intercepts hook events and gates actions behind a sequential checklist — one question per invocation, acknowledged by the agent, persisted to disk.
 
+**[Installation →](Installation.md)** · **[Architecture →](Architecture.md)** · **[Contributing →](CONTRIBUTING.md)**
+
 ---
 
 ## The Problem
@@ -91,6 +93,10 @@ stateDiagram-v2
     test_coverage: Did you increase test coverage?
     skip_reason  : Describe why test coverage was skipped.
 ```
+
+See [`examples/git-push-quality-gate/`](examples/git-push-quality-gate/) for a complete working example.
+
+---
 
 ## Editor support
 
