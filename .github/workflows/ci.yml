@@ -41,6 +41,9 @@ jobs:
       - name: Run tests
         run: cargo test --manifest-path core/Cargo.toml
 
+      - name: Check docs
+        run: RUSTDOCFLAGS="-D warnings" cargo doc --manifest-path core/Cargo.toml --no-deps
+
   build:
     name: Build release binary
     runs-on: ${{ matrix.os }}
