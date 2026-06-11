@@ -103,6 +103,12 @@ mod tests {
     }
 
     #[test]
+    fn ack_sh_handles_complete_session() {
+        assert!(ACK_SH.contains("session already complete"));
+        assert!(ACK_SH.contains("[*]"));
+    }
+
+    #[test]
     fn ensure_ack_sh_is_idempotent() {
         let tmp = TempDir::new().unwrap();
         let path = tmp.path().join("ack.sh");
