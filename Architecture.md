@@ -51,7 +51,7 @@ Commit `.steplock/checklists/` — these are your checklist definitions. Gitigno
 
 **Init** — lazy. First hook invocation for an unseen scope key creates the dir and initializes `state.json` with the start state.
 
-**Cleanup** — polyhook emits `session:stop`. steplock removes `.steplock/sessions/<session-id>/`. (Cleanup on `session:stop` is planned — not yet implemented.)
+**Cleanup** — polyhook emits `session:stop`. steplock removes `.steplock/sessions/<session-id>/`.
 
 ---
 
