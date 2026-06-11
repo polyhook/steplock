@@ -1,10 +1,42 @@
 use std::env;
+use std::fs;
 use std::path::{Path, PathBuf};
 use std::process;
 
 use steplock_core::{run, HookEvent, HookResponse};
 
+const VERSION: &str = env!("CARGO_PKG_VERSION");
+
 fn main() {
+    let args: Vec<String> = env::args().skip(1).collect();
+    match args.as_slice() {
+        [flag] if flag == "--version" || flag == "-V" => {
+            println!("steplock {VERSION}");
+        }
+        [cmd] if cmd == "init" => {
+            let cwd = env::current_dir().unwrap();
+            if let Err(e) = cmd_init(&cwd) {
+                eprintln!("steplock init: {e}");
+                process::exit(1);
+            }
+        }
+        [] => run_hook(),
+        _ => {
+            eprintln!("steplock: unknown arguments");
+            eprintln!("Usage: steplock [--version | init]");
+            process::exit(1);
+        }
+    }
+}
+
+fn cmd_init(root: &Path) -> std::io::Result<()> {
+    let checklists = root.join(".steplock/checklists");
+    fs::create_dir_all(&checklists)?;
+    println!("steplock: created {}", checklists.display());
+    Ok(())
+}
+
+fn run_hook() {
     let repo_root = find_repo_root_from(&env::current_dir().unwrap())
         .unwrap_or_else(|| env::current_dir().unwrap());
 
@@ -101,6 +133,26 @@ reset = "session"
     }
 
     #[test]
+    fn version_string_is_nonempty() {
+        assert!(!VERSION.is_empty());
+    }
+
+    #[test]
+    fn cmd_init_creates_checklists_dir() {
+        let tmp = TempDir::new().unwrap();
+        cmd_init(tmp.path()).unwrap();
+        assert!(tmp.path().join(".steplock/checklists").is_dir());
+    }
+
+    #[test]
+    fn cmd_init_is_idempotent() {
+        let tmp = TempDir::new().unwrap();
+        cmd_init(tmp.path()).unwrap();
+        cmd_init(tmp.path()).unwrap();
+        assert!(tmp.path().join(".steplock/checklists").is_dir());
+    }
+
+    #[test]
     fn polyhook_event_maps_correctly() {
         let stdin = make_claude_stdin("git push origin main", "s1");
         let ph_event = polyhook::parse::parse_event(stdin.as_bytes()).unwrap();
@@ -153,5 +205,12 @@ reset = "session"
         fs::create_dir_all(&subdir).unwrap();
         let root = find_repo_root_from(&subdir).unwrap();
         assert_eq!(root, tmp.path());
+    }
+
+    #[test]
+    fn find_repo_root_returns_none_when_not_found() {
+        let tmp = TempDir::new().unwrap();
+        let result = find_repo_root_from(tmp.path());
+        assert!(result.is_none());
     }
 }
