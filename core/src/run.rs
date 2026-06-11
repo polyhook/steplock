@@ -16,6 +16,12 @@ use crate::state::{init_state, load_state, save_state, HookEvent, HookResponse, 
 /// `HookResponse::Block { message }` with the gate message.
 pub fn run(event: &HookEvent, repo_root: &Path) -> Result<HookResponse> {
     let steplock_dir = repo_root.join(".steplock");
+
+    if event.event == "session:stop" {
+        cleanup_session(&steplock_dir, &event.session_id)?;
+        return Ok(HookResponse::Approve);
+    }
+
     let checklists_dir = steplock_dir.join("checklists");
 
     if !checklists_dir.exists() {
@@ -172,6 +178,28 @@ pub fn run(event: &HookEvent, repo_root: &Path) -> Result<HookResponse> {
     }
 
     Ok(HookResponse::Approve)
+}
+
+fn cleanup_session(steplock_dir: &Path, session_id: &str) -> Result<()> {
+    if !steplock_dir.exists() {
+        return Ok(());
+    }
+    let scope_key = if !session_id.is_empty() {
+        session_id.to_owned()
+    } else {
+        let fallback_path = steplock_dir.join("sessions").join("fallback-id");
+        if !fallback_path.exists() {
+            return Ok(());
+        }
+        fs::read_to_string(&fallback_path).map(|s| s.trim().to_owned())?
+    };
+    let scope_dir = steplock_dir.join("sessions").join(&scope_key);
+    if !scope_dir.exists() {
+        return Ok(());
+    }
+    fs::remove_dir_all(&scope_dir)?;
+    eprintln!("steplock: cleaned up session {}", scope_key);
+    Ok(())
 }
 
 fn get_scope_key(event: &HookEvent, steplock_dir: &Path) -> Result<String> {
@@ -580,6 +608,103 @@ reset = "always"
         } else {
             panic!("expected block");
         }
+    }
+
+    #[test]
+    fn session_stop_removes_scope_dir() {
+        let tmp = TempDir::new().unwrap();
+        setup_checklist(tmp.path());
+
+        // First block creates the session dir
+        let event = make_event("tool:before", "bash", "git push origin main", "sess-stop");
+        let _ = run(&event, tmp.path()).unwrap();
+        let scope_dir = tmp.path().join(".steplock/sessions/sess-stop");
+        assert!(scope_dir.exists());
+
+        // session:stop removes the scope dir
+        let stop = HookEvent {
+            event: "session:stop".to_owned(),
+            tool: String::new(),
+            input: HashMap::new(),
+            output: HashMap::new(),
+            session_id: "sess-stop".to_owned(),
+            caller: "claude-code".to_owned(),
+        };
+        let resp = run(&stop, tmp.path()).unwrap();
+        assert!(matches!(resp, HookResponse::Approve));
+        assert!(!scope_dir.exists());
+    }
+
+    #[test]
+    fn session_stop_approves_when_no_scope_dir() {
+        let tmp = TempDir::new().unwrap();
+        setup_checklist(tmp.path());
+        let stop = HookEvent {
+            event: "session:stop".to_owned(),
+            tool: String::new(),
+            input: HashMap::new(),
+            output: HashMap::new(),
+            session_id: "nonexistent-session".to_owned(),
+            caller: "claude-code".to_owned(),
+        };
+        let resp = run(&stop, tmp.path()).unwrap();
+        assert!(matches!(resp, HookResponse::Approve));
+    }
+
+    #[test]
+    fn session_stop_approves_when_no_steplock_dir() {
+        let tmp = TempDir::new().unwrap();
+        let stop = HookEvent {
+            event: "session:stop".to_owned(),
+            tool: String::new(),
+            input: HashMap::new(),
+            output: HashMap::new(),
+            session_id: "sess-x".to_owned(),
+            caller: "claude-code".to_owned(),
+        };
+        let resp = run(&stop, tmp.path()).unwrap();
+        assert!(matches!(resp, HookResponse::Approve));
+    }
+
+    #[test]
+    fn session_stop_uses_fallback_id_when_session_id_empty() {
+        let tmp = TempDir::new().unwrap();
+        setup_checklist(tmp.path());
+
+        // First block with empty session_id creates fallback-id and a scope dir
+        let mut input = HashMap::new();
+        input.insert(
+            "command".to_owned(),
+            serde_json::Value::String("git push".to_owned()),
+        );
+        let no_session = HookEvent {
+            event: "tool:before".to_owned(),
+            tool: "bash".to_owned(),
+            input,
+            output: HashMap::new(),
+            session_id: "".to_owned(),
+            caller: "unknown".to_owned(),
+        };
+        let _ = run(&no_session, tmp.path()).unwrap();
+
+        let fallback_id =
+            fs::read_to_string(tmp.path().join(".steplock/sessions/fallback-id")).unwrap();
+        let fallback_id = fallback_id.trim();
+        let scope_dir = tmp.path().join(".steplock/sessions").join(fallback_id);
+        assert!(scope_dir.exists());
+
+        // session:stop with empty session_id uses fallback-id to clean up
+        let stop = HookEvent {
+            event: "session:stop".to_owned(),
+            tool: String::new(),
+            input: HashMap::new(),
+            output: HashMap::new(),
+            session_id: "".to_owned(),
+            caller: "unknown".to_owned(),
+        };
+        let resp = run(&stop, tmp.path()).unwrap();
+        assert!(matches!(resp, HookResponse::Approve));
+        assert!(!scope_dir.exists());
     }
 
     #[test]
