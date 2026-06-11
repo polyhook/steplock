@@ -1,5 +1,6 @@
 *.local.*
 target/
+*.profraw
 
 # steplock runtime state — commit checklists, ignore everything else
 .steplock/sessions/
