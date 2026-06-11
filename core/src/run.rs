@@ -191,8 +191,7 @@ fn cleanup_session(steplock_dir: &Path, session_id: &str) -> Result<()> {
         if !fallback_path.exists() {
             return Ok(());
         }
-        fs::read_to_string(&fallback_path)
-            .map(|s| s.trim().to_owned())?
+        fs::read_to_string(&fallback_path).map(|s| s.trim().to_owned())?
     };
     let scope_dir = steplock_dir.join("sessions").join(&scope_key);
     if !scope_dir.exists() {
@@ -688,10 +687,8 @@ reset = "always"
         };
         let _ = run(&no_session, tmp.path()).unwrap();
 
-        let fallback_id = fs::read_to_string(
-            tmp.path().join(".steplock/sessions/fallback-id"),
-        )
-        .unwrap();
+        let fallback_id =
+            fs::read_to_string(tmp.path().join(".steplock/sessions/fallback-id")).unwrap();
         let fallback_id = fallback_id.trim();
         let scope_dir = tmp.path().join(".steplock/sessions").join(fallback_id);
         assert!(scope_dir.exists());
