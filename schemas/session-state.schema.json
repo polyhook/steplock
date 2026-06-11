@@ -21,7 +21,7 @@
     },
     "transitions": {
       "type": "array",
-      "description": "Valid next state names from current_state. ack.sh validates $1 against this list.",
+      "description": "Valid next state names from current_state. ack.sh validates $1 against this list. Empty when checklist is complete.",
       "items": { "type": "string" }
     },
     "visited": {
