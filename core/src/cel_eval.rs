@@ -245,7 +245,7 @@ mod tests {
     #[test]
     fn json_float_input_converts() {
         let mut input = HashMap::new();
-        input.insert("val".to_owned(), json!(3.14f64));
+        input.insert("val".to_owned(), json!(1.23f64));
         let ev = HookEvent {
             event: "tool:before".to_owned(),
             tool: "bash".to_owned(),
