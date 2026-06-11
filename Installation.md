@@ -54,7 +54,7 @@ mv target/release/steplock /usr/local/bin/
 
 ```sh
 # Cargo
-cargo install steplock
+cargo install steplock-core
 ```
 
 ---

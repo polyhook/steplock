@@ -22,8 +22,7 @@
     "transitions": {
       "type": "array",
       "description": "Valid next state names from current_state. ack.sh validates $1 against this list.",
-      "items": { "type": "string" },
-      "minItems": 1
+      "items": { "type": "string" }
     },
     "visited": {
       "type": "array",
