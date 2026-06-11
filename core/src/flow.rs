@@ -41,6 +41,8 @@ impl FlowGraph {
     }
 }
 
+/// Parse a Mermaid `stateDiagram-v2` diagram from its string content.
+/// `path` is used only for error messages.
 pub fn parse_mmd(path: &str, content: &str) -> Result<FlowGraph> {
     let mut transitions: HashMap<String, Vec<String>> = HashMap::new();
     let mut labels: HashMap<String, String> = HashMap::new();

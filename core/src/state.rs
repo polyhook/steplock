@@ -16,11 +16,13 @@ pub struct SessionState {
 }
 
 impl SessionState {
+    /// Returns true when `current_state` is `"[*]"` (the terminal pseudo-state).
     pub fn is_complete(&self) -> bool {
         self.current_state == "[*]"
     }
 }
 
+/// Load and deserialize a `state.json` file.
 pub fn load_state(path: &Path) -> Result<SessionState> {
     let content = fs::read_to_string(path)?;
     Ok(serde_json::from_str(&content)?)

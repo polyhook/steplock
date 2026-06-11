@@ -1,26 +1,35 @@
 use serde::{Deserialize, Serialize};
 
+/// When to reset checklist progress for a scope.
 #[derive(Debug, Clone, Default, Deserialize, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub enum Reset {
+    /// Reset when the agent session ends (default). Progress persists across retries within the same session.
     #[default]
     Session,
+    /// Reset on every invocation — no state persisted.
     Always,
 }
 
+/// Parsed representation of a checklist's `config.toml`.
 #[derive(Debug, Clone, Deserialize)]
 pub struct ChecklistConfig {
+    /// Polyhook event type that triggers this checklist (e.g. `"tool:before"`).
     pub on_event: String,
-    /// Tool name to match (e.g. `"bash"`). Omit or set to `""` to match any tool.
+    /// Normalized tool name to match (e.g. `"bash"`, `"write_file"`). Omit or set to `""` to match any tool.
     #[serde(default)]
     pub on_tool: String,
+    /// Optional CEL expression evaluated against the hook event. Omit to match all invocations.
     pub match_input: Option<String>,
+    /// When to reset checklist progress. Defaults to `Reset::Session`.
     #[serde(default)]
     pub reset: Reset,
+    /// If true, the first block message includes a hint to run `preview.sh`.
     #[serde(default)]
     pub allow_preview_request: bool,
 }
 
+/// Parse a `config.toml` file from its string content.
 pub fn parse_config(path: &str, content: &str) -> crate::Result<ChecklistConfig> {
     toml::from_str(content).map_err(|e| crate::error::SteplockError::Toml {
         path: path.to_owned(),
