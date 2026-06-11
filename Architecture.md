@@ -1,4 +1,4 @@
-#
+# Architecture
 
 ## Multi-agent Safety
 
@@ -186,7 +186,7 @@ Or embed as a library and call `steplock::run()` before your own logic.
 | ------ | ---------------------------------- | --------------------------------------- |
 | Scope  | Normalize hook events across tools | Gate actions behind stateful checklists |
 | State  | Stateless                          | Stateful (disk-backed)                  |
-| Config | None                               | `steplock.toml`                         |
+| Config | None                               | `.steplock/checklists/*/config.toml`    |
 | Layer  | Core SDK                           | Built on top of polyhook                |
 | WASM   | Yes — detection + serde            | No — pure host logic                    |
 
