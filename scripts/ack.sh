@@ -4,6 +4,13 @@ STATE="$DIR/state.json"
 TMP="$STATE.tmp.$$"
 
 CURRENT=$(jq -r '.current_state'      "$STATE")
+
+if [ "$CURRENT" = "[*]" ]; then
+  CHECKLIST=$(jq -r '.checklist' "$STATE")
+  echo "steplock: nothing to acknowledge for '$CHECKLIST' (session already complete)"
+  exit 0
+fi
+
 NEXT=$(jq -r '.next_state // empty'   "$STATE")
 NEXT="${1:-$NEXT}"
 
