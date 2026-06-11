@@ -17,29 +17,8 @@ use crate::state::{init_state, load_state, save_state, HookEvent, HookResponse, 
 pub fn run(event: &HookEvent, repo_root: &Path) -> Result<HookResponse> {
     let steplock_dir = repo_root.join(".steplock");
 
-    // session:stop — clean up the scope dir and approve.
     if event.event == "session:stop" {
-        if steplock_dir.exists() {
-            let scope_key = if !event.session_id.is_empty() {
-                Some(event.session_id.clone())
-            } else {
-                let fallback_path = steplock_dir.join("sessions").join("fallback-id");
-                if fallback_path.exists() {
-                    fs::read_to_string(&fallback_path)
-                        .ok()
-                        .map(|s| s.trim().to_owned())
-                } else {
-                    None
-                }
-            };
-            if let Some(key) = scope_key {
-                let scope_dir = steplock_dir.join("sessions").join(&key);
-                if scope_dir.exists() {
-                    fs::remove_dir_all(&scope_dir)?;
-                    eprintln!("steplock: cleaned up session {}", key);
-                }
-            }
-        }
+        cleanup_session(&steplock_dir, &event.session_id)?;
         return Ok(HookResponse::Approve);
     }
 
@@ -199,6 +178,29 @@ pub fn run(event: &HookEvent, repo_root: &Path) -> Result<HookResponse> {
     }
 
     Ok(HookResponse::Approve)
+}
+
+fn cleanup_session(steplock_dir: &Path, session_id: &str) -> Result<()> {
+    if !steplock_dir.exists() {
+        return Ok(());
+    }
+    let scope_key = if !session_id.is_empty() {
+        session_id.to_owned()
+    } else {
+        let fallback_path = steplock_dir.join("sessions").join("fallback-id");
+        if !fallback_path.exists() {
+            return Ok(());
+        }
+        fs::read_to_string(&fallback_path)
+            .map(|s| s.trim().to_owned())?
+    };
+    let scope_dir = steplock_dir.join("sessions").join(&scope_key);
+    if !scope_dir.exists() {
+        return Ok(());
+    }
+    fs::remove_dir_all(&scope_dir)?;
+    eprintln!("steplock: cleaned up session {}", scope_key);
+    Ok(())
 }
 
 fn get_scope_key(event: &HookEvent, steplock_dir: &Path) -> Result<String> {
