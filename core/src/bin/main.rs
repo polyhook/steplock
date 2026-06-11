@@ -6,26 +6,62 @@ use std::process;
 
 use steplock_core::{run, HookEvent, HookResponse};
 
+const VERSION: &str = env!("CARGO_PKG_VERSION");
+
 fn main() {
     let args: Vec<String> = env::args().skip(1).collect();
     match args.as_slice() {
+        [flag] if flag == "--help" || flag == "-h" => {
+            print_help();
+        }
         [flag] if flag == "--version" || flag == "-V" => {
-            println!("steplock {}", env!("CARGO_PKG_VERSION"));
+            println!("steplock {VERSION}");
         }
         [cmd] if cmd == "init" => {
-            if let Err(e) = run_init(&env::current_dir().unwrap()) {
-                eprintln!("steplock: init failed: {e}");
+            let cwd = env::current_dir().unwrap();
+            if let Err(e) = cmd_init(&cwd) {
+                eprintln!("steplock init: {e}");
                 process::exit(1);
             }
         }
         [] => run_hook(),
         _ => {
             eprintln!("steplock: unknown arguments");
-            eprintln!("Usage: steplock [--version | init]");
+            eprintln!("Run 'steplock --help' for usage.");
             process::exit(1);
         }
     }
 }
+
+fn print_help() {
+    println!(
+        "steplock {VERSION}
+Stateful quality gates for AI coding agent tool calls.
+
+USAGE:
+    steplock [COMMAND]
+
+    With no arguments, reads a polyhook event from stdin and responds.
+
+COMMANDS:
+    init    Create .steplock/checklists/ directory in the current repo
+
+OPTIONS:
+    -h, --help       Print this help
+    -V, --version    Print version
+
+DOCUMENTATION:
+    https://github.com/polyhook/steplock"
+    );
+}
+
+fn cmd_init(root: &Path) -> std::io::Result<()> {
+    let checklists = root.join(".steplock/checklists");
+    fs::create_dir_all(&checklists)?;
+    println!("steplock: created {}", checklists.display());
+    Ok(())
+}
+
 
 fn run_hook() {
     let repo_root = find_repo_root_from(&env::current_dir().unwrap())
@@ -43,24 +79,6 @@ fn run_hook() {
         eprintln!("steplock: failed to write response: {e}");
         process::exit(2);
     }
-}
-
-/// Create `.steplock/checklists/` and a `.steplock/.gitignore` in `dir`.
-fn run_init(dir: &Path) -> std::io::Result<()> {
-    let checklists_dir = dir.join(".steplock").join("checklists");
-    if checklists_dir.exists() {
-        println!("steplock: .steplock/checklists/ already exists");
-        return Ok(());
-    }
-    fs::create_dir_all(&checklists_dir)?;
-    fs::write(
-        dir.join(".steplock").join(".gitignore"),
-        "sessions/\naudit.log\n",
-    )?;
-    println!("steplock: initialized .steplock/checklists/");
-    println!("Next: create a checklist in .steplock/checklists/<name>/");
-    println!("      with config.toml and flow.mmd.");
-    Ok(())
 }
 
 /// Parse the hook event from `reader`, run the gate, and return the polyhook response.
@@ -148,6 +166,31 @@ reset = "session"
 "#,
         )
         .unwrap();
+    }
+
+    #[test]
+    fn version_string_is_nonempty() {
+        assert!(!VERSION.is_empty());
+    }
+
+    #[test]
+    fn print_help_does_not_panic() {
+        print_help();
+    }
+
+    #[test]
+    fn cmd_init_creates_checklists_dir() {
+        let tmp = TempDir::new().unwrap();
+        cmd_init(tmp.path()).unwrap();
+        assert!(tmp.path().join(".steplock/checklists").is_dir());
+    }
+
+    #[test]
+    fn cmd_init_is_idempotent() {
+        let tmp = TempDir::new().unwrap();
+        cmd_init(tmp.path()).unwrap();
+        cmd_init(tmp.path()).unwrap();
+        assert!(tmp.path().join(".steplock/checklists").is_dir());
     }
 
     #[test]
@@ -241,23 +284,5 @@ reset = "session"
         let tmp = TempDir::new().unwrap();
         let result = find_repo_root_from(tmp.path());
         assert!(result.is_none());
-    }
-
-    #[test]
-    fn init_creates_checklists_dir_and_gitignore() {
-        let tmp = TempDir::new().unwrap();
-        run_init(tmp.path()).unwrap();
-        assert!(tmp.path().join(".steplock/checklists").is_dir());
-        let gitignore = fs::read_to_string(tmp.path().join(".steplock/.gitignore")).unwrap();
-        assert!(gitignore.contains("sessions/"));
-        assert!(gitignore.contains("audit.log"));
-    }
-
-    #[test]
-    fn init_is_idempotent_when_checklists_exists() {
-        let tmp = TempDir::new().unwrap();
-        fs::create_dir_all(tmp.path().join(".steplock/checklists")).unwrap();
-        // Second call should not error
-        run_init(tmp.path()).unwrap();
     }
 }
