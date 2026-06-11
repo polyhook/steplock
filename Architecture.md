@@ -4,7 +4,7 @@
 
 Multiple agents can work on the same repo simultaneously. Two problems must be solved:
 
-**1. Script isolation** — each scope gets its own directory under `.steplock/sessions/`. The dir name is the scope key — session ID for `reset = "session"`, branch name for `reset = "branch"`. `ack.sh` and `preview.sh` live there and read `state.json` from the same dir — no params needed from the agent.
+**1. Script isolation** — each scope gets its own directory under `.steplock/sessions/`. The dir name is the scope key — session ID for `reset = "session"`. `ack.sh` and `preview.sh` live there and read `state.json` from the same dir — no params needed from the agent.
 
 **2. State races** — `ack.sh` writes `state.json` atomically via temp + `mv`. On POSIX `mv` is atomic same-filesystem — a concurrent reader always sees a complete file.
 
