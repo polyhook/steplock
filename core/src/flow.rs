@@ -4,20 +4,20 @@ use crate::error::{Result, SteplockError};
 
 #[derive(Debug, Clone)]
 pub struct FlowGraph {
-    /// States reachable from [*] (the initial states).
+    /// States reachable from `[*]` (the initial states).
     pub initial: Vec<String>,
-    /// Outgoing transitions per state. States that go to [*] map to vec!["[*]"].
+    /// Outgoing transitions per state. States that go to `[*]` map to `vec!["[*]"]`.
     pub transitions: HashMap<String, Vec<String>>,
     /// Human-readable label per state.
     pub labels: HashMap<String, String>,
-    /// States with a transition to [*] (terminal states).
+    /// States with a transition to `[*]` (terminal states).
     pub terminal: HashSet<String>,
     /// Topological order of non-pseudo states (for preview output).
     pub order: Vec<String>,
 }
 
 impl FlowGraph {
-    /// Returns states that are not yet visited and not the pseudo [*] node.
+    /// Returns states that are not yet visited and not the pseudo `[*]` node.
     pub fn pending_after(&self, visited: &[String]) -> Vec<String> {
         let visited_set: HashSet<&str> = visited.iter().map(|s| s.as_str()).collect();
         self.order
@@ -27,7 +27,7 @@ impl FlowGraph {
             .collect()
     }
 
-    /// Outgoing transitions from `state`, excluding [*].
+    /// Outgoing transitions from `state`, excluding `[*]`.
     pub fn next_states(&self, state: &str) -> Vec<String> {
         self.transitions
             .get(state)
@@ -35,7 +35,7 @@ impl FlowGraph {
             .unwrap_or_default()
     }
 
-    /// True if `state` is a terminal state (transitions to [*]).
+    /// True if `state` is a terminal state (transitions to `[*]`).
     pub fn is_terminal(&self, state: &str) -> bool {
         self.terminal.contains(state)
     }
