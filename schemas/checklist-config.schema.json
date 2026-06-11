@@ -39,7 +39,7 @@
     "reset": {
       "type": "string",
       "description": "When to reset checklist progress. Defaults to 'session'.",
-      "enum": ["session", "always", "branch"],
+      "enum": ["session", "always"],
       "default": "session"
     },
     "allow_preview_request": {
