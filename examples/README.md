@@ -21,9 +21,11 @@ Each state blocks the agent until acknowledged. On the fifth invocation, the pus
 ```
 git-push-quality-gate/
 ├── .claude/settings.json                        ← Claude Code hook registration
-└── .steplock/checklists/git-push-quality-gate/
-    ├── config.toml                              ← trigger and behaviour
-    └── flow.mmd                                 ← checklist items as Mermaid diagram
+└── .steplock/
+    ├── .gitignore                               ← excludes sessions/ and audit.log
+    └── checklists/git-push-quality-gate/
+        ├── config.toml                          ← trigger and behaviour
+        └── flow.mmd                             ← checklist items as Mermaid diagram
 ```
 
 ### Usage
