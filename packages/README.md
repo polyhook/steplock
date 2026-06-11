@@ -1,12 +1,14 @@
 ## Language Support
 
-Ships as a standalone CLI binary (works with any language) and as a native library for each polyhook SDK language.
+Ships as a standalone CLI binary (works with any language) and as a native library for polyhook SDK languages.
 
-| Distribution | Usage                                      | Status    |
-| ------------ | ------------------------------------------ | --------- |
-| CLI binary   | Drop-in hook script, zero code required    | Available |
-| Rust crate   | `steplock-core` — embed in hook binary     | Available |
-| TypeScript   | `@steplock/sdk` — wrap your hook handler   | Planned   |
-| Go           | `github.com/polyhook/steplock`             | Planned   |
-| Python       | `steplock`                                 | Planned   |
-| C#           | `Steplock`                                 | Planned   |
+| Distribution | Status    | Usage                                      |
+| ------------ | --------- | ------------------------------------------ |
+| CLI binary   | Available | Drop-in hook script, zero code required    |
+| Rust crate   | Available | `steplock-core` — embed in existing binary |
+| TypeScript   | Planned   | `@steplock/sdk`                            |
+| Go           | Planned   | `github.com/polyhook/steplock`             |
+| Python       | Planned   | `steplock`                                 |
+| C#           | Planned   | `Steplock`                                 |
+
+See [Roadmap.md](../Roadmap.md) for timeline.
