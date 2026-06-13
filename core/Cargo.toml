@@ -2,6 +2,7 @@
 name = "steplock-core"
 version = "0.1.0"
 edition = "2021"
+rust-version = "1.75"
 description = "Stateful quality gate logic for steplock"
 license = "MIT"
 repository = "https://github.com/polyhook/steplock"
@@ -16,6 +17,7 @@ categories = ["development-tools", "command-line-utilities"]
 dbg_macro = "deny"
 todo = "deny"
 unimplemented = "deny"
+needless_pass_by_ref_mut = "deny"
 
 [dependencies]
 polyhook = "0.1.5"
