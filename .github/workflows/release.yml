@@ -15,12 +15,19 @@ jobs:
           - os: ubuntu-latest
             target: x86_64-unknown-linux-gnu
             archive: steplock-Linux-x86_64
+            ext: tar.gz
           - os: macos-latest
             target: aarch64-apple-darwin
             archive: steplock-Darwin-arm64
+            ext: tar.gz
           - os: macos-13
             target: x86_64-apple-darwin
             archive: steplock-Darwin-x86_64
+            ext: tar.gz
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            archive: steplock-Windows-x86_64
+            ext: zip
     steps:
       - uses: actions/checkout@v4
 
@@ -43,17 +50,25 @@ jobs:
       - name: Build
         run: cargo build --manifest-path core/Cargo.toml --release --target ${{ matrix.target }}
 
-      - name: Package
+      - name: Package (Unix)
+        if: runner.os != 'Windows'
         run: |
           cd core/target/${{ matrix.target }}/release
           tar -czf "${{ matrix.archive }}.tar.gz" steplock
           mv "${{ matrix.archive }}.tar.gz" ../../../../
 
+      - name: Package (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          Compress-Archive -Path "core/target/${{ matrix.target }}/release/steplock.exe" `
+            -DestinationPath "${{ matrix.archive }}.zip"
+
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.archive }}
-          path: ${{ matrix.archive }}.tar.gz
+          path: ${{ matrix.archive }}.${{ matrix.ext }}
 
   release:
     name: Create GitHub Release
@@ -75,7 +90,7 @@ jobs:
           gh release create "${{ github.ref_name }}" \
             --title "${{ github.ref_name }}" \
             --generate-notes \
-            artifacts/*.tar.gz
+            artifacts/*.tar.gz artifacts/*.zip
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
