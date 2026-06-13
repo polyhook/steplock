@@ -77,7 +77,6 @@ fn run_app(mut reader: impl Read, repo_root: &Path) -> Result<polyhook::HookResp
     let event = polyhook_to_hook_event(ph_event);
 
     match run(&event, repo_root) {
-        Ok(HookResponse::Approve) => Ok(polyhook::HookResponse::approve()),
         Ok(HookResponse::Block { message }) => Ok(polyhook::HookResponse::block(&message)),
         Ok(_) => Ok(polyhook::HookResponse::approve()),
         Err(e) => Err(format!("steplock: error: {e}")),
