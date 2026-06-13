@@ -66,6 +66,7 @@ pub struct HookEvent {
 
 /// Response returned to the polyhook layer.
 #[derive(Debug)]
+#[non_exhaustive]
 pub enum HookResponse {
     Block { message: String },
     Approve,
