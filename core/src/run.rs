@@ -181,14 +181,14 @@ fn cleanup_session(steplock_dir: &Path, session_id: &str) -> Result<()> {
     if !steplock_dir.exists() {
         return Ok(());
     }
-    let scope_key = if !session_id.is_empty() {
-        session_id.to_owned()
-    } else {
+    let scope_key = if session_id.is_empty() {
         let fallback_path = steplock_dir.join("sessions").join("fallback-id");
         if !fallback_path.exists() {
             return Ok(());
         }
         fs::read_to_string(&fallback_path).map(|s| s.trim().to_owned())?
+    } else {
+        session_id.to_owned()
     };
     let scope_dir = steplock_dir.join("sessions").join(&scope_key);
     if !scope_dir.exists() {
@@ -224,8 +224,7 @@ fn build_block_message(
     let label = flow
         .labels
         .get(&state.current_state)
-        .map(|s| s.as_str())
-        .unwrap_or(&state.current_state);
+        .map_or(state.current_state.as_str(), |s| s.as_str());
 
     let ack = session_dir.join("ack.sh");
     let ack_path = ack.display();
@@ -249,7 +248,7 @@ fn build_block_message(
         // Branching — show all real options
         msg.push_str("When finished, run one of:\n");
         for next in &visible {
-            let next_label = flow.labels.get(*next).map(|s| s.as_str()).unwrap_or(next);
+            let next_label = flow.labels.get(*next).map_or(next.as_str(), |s| s.as_str());
             msg.push_str(&format!("  sh {ack_path} {next}   — {next_label}\n"));
         }
         msg.push_str("Then retry your original command.");
@@ -475,7 +474,7 @@ reset = "always"
             tool: "bash".to_owned(),
             input,
             output: HashMap::new(),
-            session_id: "".to_owned(),
+            session_id: String::new(),
             caller: "unknown".to_owned(),
         };
         let resp = run(&event, tmp.path()).unwrap();
@@ -678,7 +677,7 @@ reset = "always"
             tool: "bash".to_owned(),
             input,
             output: HashMap::new(),
-            session_id: "".to_owned(),
+            session_id: String::new(),
             caller: "unknown".to_owned(),
         };
         let _ = run(&no_session, tmp.path()).unwrap();
@@ -695,7 +694,7 @@ reset = "always"
             tool: String::new(),
             input: HashMap::new(),
             output: HashMap::new(),
-            session_id: "".to_owned(),
+            session_id: String::new(),
             caller: "unknown".to_owned(),
         };
         let resp = run(&stop, tmp.path()).unwrap();

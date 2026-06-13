@@ -1,5 +1,10 @@
 # steplock
 
+[![CI](https://github.com/polyhook/steplock/actions/workflows/ci.yml/badge.svg)](https://github.com/polyhook/steplock/actions/workflows/ci.yml)
+[![Crates.io](https://img.shields.io/crates/v/steplock-core.svg)](https://crates.io/crates/steplock-core)
+[![MSRV](https://img.shields.io/badge/rustc-1.75+-orange.svg)](https://www.rust-lang.org)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+
 **Stateful quality gates for AI coding agent actions.**
 
 steplock sits on top of the [polyhook](https://github.com/tupe12334/polyhook) SDK. It intercepts hook events and gates actions behind a sequential checklist — one question per invocation, acknowledged by the agent, persisted to disk.
