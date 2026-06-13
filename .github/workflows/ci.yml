@@ -70,5 +70,7 @@ jobs:
       - name: Build release binary
         run: cargo build --manifest-path core/Cargo.toml --release
 
-      - name: Smoke-test binary exists and runs
-        run: test -f core/target/release/steplock
+      - name: Smoke-test binary
+        run: |
+          test -f core/target/release/steplock
+          core/target/release/steplock --version

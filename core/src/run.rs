@@ -81,7 +81,7 @@ pub fn run(event: &HookEvent, repo_root: &Path) -> Result<HookResponse> {
                     .cloned()
                     .unwrap_or_default();
                 let next_state = if transitions.len() == 1 {
-                    Some(transitions[0].clone())
+                    transitions.first().cloned()
                 } else {
                     None
                 };
@@ -143,7 +143,7 @@ pub fn run(event: &HookEvent, repo_root: &Path) -> Result<HookResponse> {
 
                 // next_state: auto-advance when only one transition (may be "[*]").
                 state.next_state = if raw_transitions.len() == 1 {
-                    Some(raw_transitions[0].clone())
+                    raw_transitions.first().cloned()
                 } else {
                     None
                 };
