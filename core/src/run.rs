@@ -224,7 +224,7 @@ fn build_block_message(
     let label = flow
         .labels
         .get(&state.current_state)
-        .map(|s| s.as_str())
+        .map(String::as_str)
         .unwrap_or(&state.current_state);
 
     let ack = session_dir.join("ack.sh");
@@ -249,7 +249,7 @@ fn build_block_message(
         // Branching — show all real options
         msg.push_str("When finished, run one of:\n");
         for next in &visible {
-            let next_label = flow.labels.get(*next).map(|s| s.as_str()).unwrap_or(next);
+            let next_label = flow.labels.get(*next).map(String::as_str).unwrap_or(next);
             msg.push_str(&format!("  sh {ack_path} {next}   — {next_label}\n"));
         }
         msg.push_str("Then retry your original command.");
