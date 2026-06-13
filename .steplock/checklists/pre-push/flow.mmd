@@ -10,7 +10,7 @@ stateDiagram-v2
 
     tests_pass   : Did `cargo test` pass with no failures?
     clippy_clean : Is `cargo clippy` free of warnings?
-    clippy_deny  : Did you ratchet code quality by promoting at least one clippy lint to `deny` (via `[lints.clippy]` in Cargo.toml or `#![deny(clippy::...)]`) and fix any resulting violations?
+    clippy_deny  : Did you ratchet code quality by promoting at least one clippy lint to deny (via lints.clippy in Cargo.toml or deny attribute) and fix any resulting violations?
     fmt_clean    : Does `cargo fmt --check` pass?
     docs_updated : Did you update docs for any changed public API?
     no_todos     : Are there no leftover TODO / FIXME / unimplemented!() markers?
