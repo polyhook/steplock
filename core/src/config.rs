@@ -11,6 +11,8 @@ pub enum Reset {
 #[derive(Debug, Clone, Deserialize)]
 pub struct ChecklistConfig {
     pub on_event: String,
+    /// Tool name to match (e.g. `"bash"`). Omit or set to `""` to match any tool.
+    #[serde(default)]
     pub on_tool: String,
     pub match_input: Option<String>,
     #[serde(default)]
@@ -45,6 +47,18 @@ on_tool  = "bash"
         assert!(cfg.match_input.is_none());
         assert!(matches!(cfg.reset, Reset::Session));
         assert!(!cfg.allow_preview_request);
+    }
+
+    #[test]
+    fn on_tool_defaults_to_empty_when_omitted() {
+        let cfg = parse_config(
+            "test.toml",
+            r#"
+on_event = "tool:before"
+"#,
+        )
+        .unwrap();
+        assert_eq!(cfg.on_tool, "");
     }
 
     #[test]
