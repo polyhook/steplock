@@ -16,6 +16,7 @@ categories = ["development-tools", "command-line-utilities"]
 dbg_macro = "deny"
 todo = "deny"
 unimplemented = "deny"
+manual_string_new = "deny"
 uninlined_format_args = "deny"
 cloned_instead_of_copied = "deny"
 

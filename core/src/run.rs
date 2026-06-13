@@ -475,7 +475,7 @@ reset = "always"
             tool: "bash".to_owned(),
             input,
             output: HashMap::new(),
-            session_id: "".to_owned(),
+            session_id: String::new(),
             caller: "unknown".to_owned(),
         };
         let resp = run(&event, tmp.path()).unwrap();
@@ -678,7 +678,7 @@ reset = "always"
             tool: "bash".to_owned(),
             input,
             output: HashMap::new(),
-            session_id: "".to_owned(),
+            session_id: String::new(),
             caller: "unknown".to_owned(),
         };
         let _ = run(&no_session, tmp.path()).unwrap();
@@ -695,7 +695,7 @@ reset = "always"
             tool: String::new(),
             input: HashMap::new(),
             output: HashMap::new(),
-            session_id: "".to_owned(),
+            session_id: String::new(),
             caller: "unknown".to_owned(),
         };
         let resp = run(&stop, tmp.path()).unwrap();
