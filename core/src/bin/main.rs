@@ -7,23 +7,27 @@ use std::process;
 use steplock_core::{run, HookEvent, HookResponse};
 
 fn main() {
-    let args: Vec<String> = env::args().collect();
-
-    match args.get(1).map(String::as_str) {
-        Some("--version") | Some("-V") => {
+    let args: Vec<String> = env::args().skip(1).collect();
+    match args.as_slice() {
+        [flag] if flag == "--version" || flag == "-V" => {
             println!("steplock {}", env!("CARGO_PKG_VERSION"));
-            return;
         }
-        Some("init") => {
+        [cmd] if cmd == "init" => {
             if let Err(e) = run_init(&env::current_dir().unwrap()) {
                 eprintln!("steplock: init failed: {e}");
                 process::exit(1);
             }
-            return;
         }
-        _ => {}
+        [] => run_hook(),
+        _ => {
+            eprintln!("steplock: unknown arguments");
+            eprintln!("Usage: steplock [--version | init]");
+            process::exit(1);
+        }
     }
+}
 
+fn run_hook() {
     let repo_root = find_repo_root_from(&env::current_dir().unwrap())
         .unwrap_or_else(|| env::current_dir().unwrap());
 

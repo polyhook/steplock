@@ -160,8 +160,9 @@ Follow your tool's hook registration docs and point the hook command at `steploc
 Trigger a matched action from your AI tool (e.g. ask it to run `git push`). Expected output in the hook response:
 
 ```
-BLOCKED — Did you write clean, readable code?
-When finished, run: sh .steplock/sessions/<session-id>/ack.sh
+Did you write clean, readable code?
+
+When finished, run: sh /path/to/repo/.steplock/sessions/<session-id>/git-push-quality-gate/ack.sh
 Then retry your original command.
 ```
 

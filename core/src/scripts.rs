@@ -65,7 +65,7 @@ fn build_preview_sh(checklist_name: &str, flow: &FlowGraph) -> String {
         // Escape single quotes in label
         let label_escaped = label.replace('\'', "'\\''");
         let state_escaped = state.replace('\'', "'\\''");
-        lines.push(format!("check '{}' '{}'", label_escaped, state_escaped));
+        lines.push(format!("check '{label_escaped}' '{state_escaped}'"));
     }
 
     lines.join("\n") + "\n"
