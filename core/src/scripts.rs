@@ -61,7 +61,7 @@ fn build_preview_sh(checklist_name: &str, flow: &FlowGraph) -> String {
     ];
 
     for state in &flow.order {
-        let label = flow.labels.get(state).map(|s| s.as_str()).unwrap_or(state);
+        let label = flow.labels.get(state).map_or(state.as_str(), |s| s.as_str());
         // Escape single quotes in label
         let label_escaped = label.replace('\'', "'\\''");
         let state_escaped = state.replace('\'', "'\\''");
