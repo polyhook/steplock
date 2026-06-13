@@ -19,6 +19,7 @@ unimplemented = "deny"
 manual_string_new = "deny"
 uninlined_format_args = "deny"
 cloned_instead_of_copied = "deny"
+map_unwrap_or = "deny"
 
 [dependencies]
 polyhook = "0.1.5"
