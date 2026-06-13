@@ -181,14 +181,14 @@ fn cleanup_session(steplock_dir: &Path, session_id: &str) -> Result<()> {
     if !steplock_dir.exists() {
         return Ok(());
     }
-    let scope_key = if !session_id.is_empty() {
-        session_id.to_owned()
-    } else {
+    let scope_key = if session_id.is_empty() {
         let fallback_path = steplock_dir.join("sessions").join("fallback-id");
         if !fallback_path.exists() {
             return Ok(());
         }
         fs::read_to_string(&fallback_path).map(|s| s.trim().to_owned())?
+    } else {
+        session_id.to_owned()
     };
     let scope_dir = steplock_dir.join("sessions").join(&scope_key);
     if !scope_dir.exists() {
