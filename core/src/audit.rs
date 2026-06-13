@@ -19,7 +19,7 @@ pub fn append(steplock_dir: &Path, event: &str, checklist: &str, state: &str, se
     .to_string();
 
     if let Ok(mut f) = OpenOptions::new().create(true).append(true).open(&path) {
-        let _ = writeln!(f, "{}", line);
+        let _ = writeln!(f, "{line}");
     }
 }
 

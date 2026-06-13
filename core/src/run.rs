@@ -103,10 +103,7 @@ pub fn run(event: &HookEvent, repo_root: &Path) -> Result<HookResponse> {
                 let tmp_dir = steplock_dir.join("sessions").join("always");
                 let message =
                     build_block_message(&state, &flow, &tmp_dir, config.allow_preview_request);
-                eprintln!(
-                    "steplock: block [{}] state={}",
-                    checklist_name, initial_state
-                );
+                eprintln!("steplock: block [{checklist_name}] state={initial_state}");
                 return Ok(HookResponse::Block { message });
             }
 
@@ -198,7 +195,7 @@ fn cleanup_session(steplock_dir: &Path, session_id: &str) -> Result<()> {
         return Ok(());
     }
     fs::remove_dir_all(&scope_dir)?;
-    eprintln!("steplock: cleaned up session {}", scope_key);
+    eprintln!("steplock: cleaned up session {scope_key}");
     Ok(())
 }
 
@@ -246,24 +243,23 @@ fn build_block_message(
     if visible.len() <= 1 {
         // Linear — single transition (or terminal → [*])
         msg.push_str(&format!(
-            "When finished, run: sh {}\nThen retry your original command.",
-            ack_path
+            "When finished, run: sh {ack_path}\nThen retry your original command."
         ));
     } else {
         // Branching — show all real options
         msg.push_str("When finished, run one of:\n");
         for next in &visible {
             let next_label = flow.labels.get(*next).map(|s| s.as_str()).unwrap_or(next);
-            msg.push_str(&format!("  sh {} {}   — {}\n", ack_path, next, next_label));
+            msg.push_str(&format!("  sh {ack_path} {next}   — {next_label}\n"));
         }
         msg.push_str("Then retry your original command.");
     }
 
     if allow_preview && state.visited.is_empty() {
         let preview = session_dir.join("preview.sh");
+        let preview_path = preview.display();
         msg.push_str(&format!(
-            "\n(Tip: run sh {} to see all items first.)",
-            preview.display()
+            "\n(Tip: run sh {preview_path} to see all items first.)"
         ));
     }
 
