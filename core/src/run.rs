@@ -67,10 +67,13 @@ pub fn run(event: &HookEvent, repo_root: &Path) -> Result<HookResponse> {
         let flow_str = fs::read_to_string(&flow_path)?;
         let flow = parse_mmd(flow_path.to_str().unwrap_or("flow.mmd"), &flow_str)?;
 
-        let initial_state = flow
-            .initial
-            .first()
-            .expect("parse_mmd guarantees at least one initial state");
+        let initial_state =
+            flow.initial
+                .first()
+                .ok_or_else(|| crate::error::SteplockError::Mermaid {
+                    path: flow_path.to_str().unwrap_or("flow.mmd").to_owned(),
+                    message: "no initial state found".to_owned(),
+                })?;
 
         match config.reset {
             Reset::Always => {
