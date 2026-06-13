@@ -18,6 +18,7 @@ pub struct FlowGraph {
 
 impl FlowGraph {
     /// Returns states that are not yet visited and not the pseudo `[*]` node.
+    #[must_use]
     pub fn pending_after(&self, visited: &[String]) -> Vec<String> {
         let visited_set: HashSet<&str> = visited.iter().map(|s| s.as_str()).collect();
         self.order
@@ -28,6 +29,7 @@ impl FlowGraph {
     }
 
     /// Outgoing transitions from `state`, excluding `[*]`.
+    #[must_use]
     pub fn next_states(&self, state: &str) -> Vec<String> {
         self.transitions
             .get(state)
@@ -36,6 +38,7 @@ impl FlowGraph {
     }
 
     /// True if `state` is a terminal state (transitions to `[*]`).
+    #[must_use]
     pub fn is_terminal(&self, state: &str) -> bool {
         self.terminal.contains(state)
     }
