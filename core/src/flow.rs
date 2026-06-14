@@ -1,4 +1,4 @@
-use std::collections::{HashMap, HashSet};
+use std::collections::{HashMap, HashSet, VecDeque};
 
 use crate::error::{Result, SteplockError};
 
@@ -118,7 +118,7 @@ fn split_label(line: &str) -> Option<(&str, &str)> {
 fn topo_order(initial: &[String], transitions: &HashMap<String, Vec<String>>) -> Vec<String> {
     let mut visited: HashSet<String> = HashSet::new();
     let mut order: Vec<String> = Vec::new();
-    let mut queue: std::collections::VecDeque<String> = initial.iter().cloned().collect();
+    let mut queue: VecDeque<String> = initial.iter().cloned().collect();
 
     while let Some(state) = queue.pop_front() {
         if visited.contains(&state) {

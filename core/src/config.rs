@@ -1,5 +1,7 @@
 use serde::{Deserialize, Serialize};
 
+use crate::error::SteplockError;
+
 #[derive(Debug, Clone, Default, Deserialize, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub enum Reset {
@@ -22,7 +24,7 @@ pub struct ChecklistConfig {
 }
 
 pub fn parse_config(path: &str, content: &str) -> crate::Result<ChecklistConfig> {
-    toml::from_str(content).map_err(|e| crate::error::SteplockError::Toml {
+    toml::from_str(content).map_err(|e| SteplockError::Toml {
         path: path.to_owned(),
         source: e,
     })

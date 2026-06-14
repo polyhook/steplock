@@ -1,15 +1,19 @@
+use std::io;
+use std::result;
+
 use thiserror::Error;
+use toml::de;
 
 #[derive(Debug, Error)]
 #[non_exhaustive]
 pub enum SteplockError {
     #[error("IO error: {0}")]
-    Io(#[from] std::io::Error),
+    Io(#[from] io::Error),
 
     #[error("TOML parse error in {path}: {source}")]
     Toml {
         path: String,
-        source: toml::de::Error,
+        source: de::Error,
     },
 
     #[error("JSON error: {0}")]
@@ -25,4 +29,4 @@ pub enum SteplockError {
     State(String),
 }
 
-pub type Result<T> = std::result::Result<T, SteplockError>;
+pub type Result<T> = result::Result<T, SteplockError>;
