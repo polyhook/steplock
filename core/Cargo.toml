@@ -38,5 +38,10 @@ chrono = { version = "0.4", features = ["serde"] }
 name = "steplock"
 path = "src/bin/main.rs"
 
+[profile.release]
+strip = "symbols"
+lto = "thin"
+codegen-units = 1
+
 [dev-dependencies]
 tempfile = "3"
