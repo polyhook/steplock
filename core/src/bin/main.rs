@@ -18,13 +18,95 @@ fn main() {
                 process::exit(1);
             }
         }
+        [cmd] if cmd == "validate" => {
+            let dir = env::current_dir().unwrap();
+            let root = find_repo_root_from(&dir).unwrap_or(dir);
+            match run_validate(&root) {
+                Ok(true) => {}
+                Ok(false) => process::exit(1),
+                Err(e) => {
+                    eprintln!("steplock: validate failed: {e}");
+                    process::exit(1);
+                }
+            }
+        }
         [] => run_hook(),
         _ => {
             eprintln!("steplock: unknown arguments");
-            eprintln!("Usage: steplock [--version | init]");
+            eprintln!("Usage: steplock [--version | init | validate]");
             process::exit(1);
         }
     }
+}
+
+/// Validate all checklists in `.steplock/checklists/`. Returns `Ok(true)` if all valid,
+/// `Ok(false)` if any checklist failed validation (errors already printed), or `Err` on I/O.
+fn run_validate(repo_root: &Path) -> std::io::Result<bool> {
+    use steplock_core::{config::parse_config, flow::parse_mmd};
+
+    let checklists_dir = repo_root.join(".steplock").join("checklists");
+    if !checklists_dir.exists() {
+        println!("steplock: no .steplock/checklists/ found");
+        return Ok(true);
+    }
+
+    let mut entries: Vec<PathBuf> = fs::read_dir(&checklists_dir)?
+        .filter_map(|e| e.ok().map(|e| e.path()))
+        .filter(|p| p.is_dir())
+        .collect();
+    entries.sort();
+
+    if entries.is_empty() {
+        println!("steplock: no checklists found in .steplock/checklists/");
+        return Ok(true);
+    }
+
+    let mut all_ok = true;
+    for entry in entries {
+        let name = entry
+            .file_name()
+            .and_then(|n| n.to_str())
+            .unwrap_or("?")
+            .to_owned();
+        let config_path = entry.join("config.toml");
+        let flow_path = entry.join("flow.mmd");
+
+        if !config_path.exists() {
+            eprintln!("steplock: [{name}] missing config.toml");
+            all_ok = false;
+            continue;
+        }
+        if !flow_path.exists() {
+            eprintln!("steplock: [{name}] missing flow.mmd");
+            all_ok = false;
+            continue;
+        }
+
+        let mut checklist_ok = true;
+
+        let config_str = fs::read_to_string(&config_path)?;
+        if let Err(e) = parse_config(config_path.to_str().unwrap_or("config.toml"), &config_str) {
+            eprintln!("steplock: [{name}] config.toml error: {e}");
+            checklist_ok = false;
+        }
+
+        let flow_str = fs::read_to_string(&flow_path)?;
+        if let Err(e) = parse_mmd(flow_path.to_str().unwrap_or("flow.mmd"), &flow_str) {
+            eprintln!("steplock: [{name}] flow.mmd error: {e}");
+            checklist_ok = false;
+        }
+
+        if checklist_ok {
+            println!("steplock: [{name}] ok");
+        } else {
+            all_ok = false;
+        }
+    }
+
+    if all_ok {
+        println!("steplock: all checklists valid");
+    }
+    Ok(all_ok)
 }
 
 fn run_hook() {
@@ -257,7 +339,75 @@ reset = "session"
     fn init_is_idempotent_when_checklists_exists() {
         let tmp = TempDir::new().unwrap();
         fs::create_dir_all(tmp.path().join(".steplock/checklists")).unwrap();
-        // Second call should not error
         run_init(tmp.path()).unwrap();
+    }
+
+    #[test]
+    fn validate_returns_true_when_no_checklists_dir() {
+        let tmp = TempDir::new().unwrap();
+        assert!(run_validate(tmp.path()).unwrap());
+    }
+
+    #[test]
+    fn validate_returns_true_when_checklists_empty() {
+        let tmp = TempDir::new().unwrap();
+        fs::create_dir_all(tmp.path().join(".steplock/checklists")).unwrap();
+        assert!(run_validate(tmp.path()).unwrap());
+    }
+
+    #[test]
+    fn validate_returns_true_for_valid_checklist() {
+        let tmp = TempDir::new().unwrap();
+        setup_checklist(tmp.path());
+        assert!(run_validate(tmp.path()).unwrap());
+    }
+
+    #[test]
+    fn validate_returns_false_when_config_toml_missing() {
+        let tmp = TempDir::new().unwrap();
+        let cl_dir = tmp.path().join(".steplock/checklists/no-config");
+        fs::create_dir_all(&cl_dir).unwrap();
+        fs::write(cl_dir.join("flow.mmd"), "stateDiagram-v2\n    [*] --> s\n    s --> [*]\n    s: Step\n").unwrap();
+        assert!(!run_validate(tmp.path()).unwrap());
+    }
+
+    #[test]
+    fn validate_returns_false_when_flow_mmd_missing() {
+        let tmp = TempDir::new().unwrap();
+        let cl_dir = tmp.path().join(".steplock/checklists/no-flow");
+        fs::create_dir_all(&cl_dir).unwrap();
+        fs::write(cl_dir.join("config.toml"), "on_event = \"tool:before\"\nreset = \"session\"\n").unwrap();
+        assert!(!run_validate(tmp.path()).unwrap());
+    }
+
+    #[test]
+    fn validate_returns_false_for_invalid_config_toml() {
+        let tmp = TempDir::new().unwrap();
+        let cl_dir = tmp.path().join(".steplock/checklists/bad-config");
+        fs::create_dir_all(&cl_dir).unwrap();
+        fs::write(cl_dir.join("config.toml"), "not valid toml !!!").unwrap();
+        fs::write(cl_dir.join("flow.mmd"), "stateDiagram-v2\n    [*] --> s\n    s --> [*]\n    s: Step\n").unwrap();
+        assert!(!run_validate(tmp.path()).unwrap());
+    }
+
+    #[test]
+    fn validate_returns_false_for_invalid_flow_mmd() {
+        let tmp = TempDir::new().unwrap();
+        let cl_dir = tmp.path().join(".steplock/checklists/bad-flow");
+        fs::create_dir_all(&cl_dir).unwrap();
+        fs::write(cl_dir.join("config.toml"), "on_event = \"tool:before\"\nreset = \"session\"\n").unwrap();
+        fs::write(cl_dir.join("flow.mmd"), "stateDiagram-v2\n    a --> b\n").unwrap();
+        assert!(!run_validate(tmp.path()).unwrap());
+    }
+
+    #[test]
+    fn validate_continues_checking_all_checklists_after_failure() {
+        let tmp = TempDir::new().unwrap();
+        setup_checklist(tmp.path());
+        let bad_dir = tmp.path().join(".steplock/checklists/0-bad");
+        fs::create_dir_all(&bad_dir).unwrap();
+        fs::write(bad_dir.join("config.toml"), "not valid").unwrap();
+        fs::write(bad_dir.join("flow.mmd"), "stateDiagram-v2\n    [*] --> s\n    s --> [*]\n    s: Step\n").unwrap();
+        assert!(!run_validate(tmp.path()).unwrap());
     }
 }
