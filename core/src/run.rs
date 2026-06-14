@@ -235,7 +235,9 @@ fn build_block_message(
     let ack = session_dir.join("ack.sh");
     let ack_path = ack.display();
 
-    let mut msg = label.to_owned();
+    let step = state.visited.len() + 1;
+    let total = flow.order.len();
+    let mut msg = format!("[{step}/{total}] {label}");
     msg.push_str("\n\n");
 
     // Real next states visible to the agent (exclude pseudo [*] node).
@@ -464,6 +466,50 @@ reset = "always"
         let resp = run(&event, tmp.path()).unwrap();
         if let HookResponse::Block { message } = resp {
             assert!(message.contains("ack.sh"));
+        } else {
+            panic!("expected block");
+        }
+    }
+
+    #[test]
+    fn block_message_shows_step_progress() {
+        let tmp = TempDir::new().unwrap();
+        // 3-step linear flow: a → b → c → [*]
+        let cl_dir = tmp.path().join(".steplock/checklists/progress-gate");
+        fs::create_dir_all(&cl_dir).unwrap();
+        fs::write(
+            cl_dir.join("config.toml"),
+            "on_event = \"tool:before\"\non_tool = \"bash\"\nmatch_input = \"input.command.contains('git push')\"\nreset = \"session\"\n",
+        )
+        .unwrap();
+        fs::write(
+            cl_dir.join("flow.mmd"),
+            "stateDiagram-v2\n    [*] --> a\n    a --> b\n    b --> c\n    c --> [*]\n    a: Step A\n    b: Step B\n    c: Step C\n",
+        )
+        .unwrap();
+
+        // First block: step 1/3
+        let event = make_event("tool:before", "bash", "git push", "sess-prog");
+        let resp = run(&event, tmp.path()).unwrap();
+        if let HookResponse::Block { message } = resp {
+            assert!(message.starts_with("[1/3]"), "expected [1/3] prefix, got: {message}");
+        } else {
+            panic!("expected block");
+        }
+
+        // Advance state manually to simulate ack
+        let state_path = tmp.path().join(".steplock/sessions/sess-prog/progress-gate/state.json");
+        let mut state = load_state(&state_path).unwrap();
+        state.visited.push(state.current_state.clone());
+        state.current_state = "b".to_owned();
+        state.next_state = Some("c".to_owned());
+        state.transitions = vec!["c".to_owned()];
+        save_state(&state_path, &state).unwrap();
+
+        // Second block: step 2/3
+        let resp2 = run(&event, tmp.path()).unwrap();
+        if let HookResponse::Block { message } = resp2 {
+            assert!(message.starts_with("[2/3]"), "expected [2/3] prefix, got: {message}");
         } else {
             panic!("expected block");
         }
