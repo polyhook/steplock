@@ -6,27 +6,43 @@ use serde::{Deserialize, Serialize};
 
 use crate::error::Result;
 
+/// Persisted checklist progress for a single session and checklist.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SessionState {
+    /// Name of the checklist this state belongs to.
     pub checklist: String,
+    /// The current Mermaid state node the agent must acknowledge.
     pub current_state: String,
+    /// The single next state when the flow is linear; `None` when branching.
     pub next_state: Option<String>,
+    /// All outgoing transitions from `current_state` (including `[*]`).
     pub transitions: Vec<String>,
+    /// States that have already been acknowledged in this session.
     pub visited: Vec<String>,
 }
 
 impl SessionState {
+    /// Returns `true` when the checklist has reached the terminal `[*]` node.
     pub fn is_complete(&self) -> bool {
         self.current_state == "[*]"
     }
 }
 
+/// Load `SessionState` from a JSON file at `path`.
+///
+/// # Errors
+///
+/// Returns an error if the file cannot be read or its contents are not valid JSON.
 pub fn load_state(path: &Path) -> Result<SessionState> {
     let content = fs::read_to_string(path)?;
     Ok(serde_json::from_str(&content)?)
 }
 
-/// Atomically write state via temp + mv (POSIX mv is atomic same-filesystem).
+/// Atomically write `state` to a JSON file at `path` using a temp-file rename.
+///
+/// # Errors
+///
+/// Returns an error if the file cannot be written or renamed.
 pub fn save_state(path: &Path, state: &SessionState) -> Result<()> {
     let dir = path.parent().unwrap_or(Path::new("."));
     let tmp = dir.join(format!("state.json.tmp.{}", std::process::id()));
@@ -50,17 +66,17 @@ pub fn init_state(checklist: &str, initial_state: &str) -> SessionState {
 /// Normalized hook event passed in from the polyhook layer.
 #[derive(Debug, Clone)]
 pub struct HookEvent {
-    /// Polyhook event type: "tool:before", "tool:after", "session:start", etc.
+    /// Polyhook event type: `"tool:before"`, `"tool:after"`, `"session:start"`, etc.
     pub event: String,
-    /// Normalized tool name, e.g. "bash".
+    /// Normalized tool name, e.g. `"bash"`.
     pub tool: String,
-    /// Key-value inputs from the tool call (e.g. command, path).
+    /// Key-value inputs from the tool call (e.g. `command`, `path`).
     pub input: HashMap<String, serde_json::Value>,
-    /// Key-value outputs (populated for "tool:after" events).
+    /// Key-value outputs (populated for `"tool:after"` events).
     pub output: HashMap<String, serde_json::Value>,
     /// Session ID from the AI tool. Empty if unknown.
     pub session_id: String,
-    /// Caller identifier: "claude-code", "cursor", etc.
+    /// Caller identifier: `"claude-code"`, `"cursor"`, etc.
     pub caller: String,
 }
 
@@ -68,7 +84,12 @@ pub struct HookEvent {
 #[derive(Debug)]
 #[non_exhaustive]
 pub enum HookResponse {
-    Block { message: String },
+    /// The tool call is blocked; `message` is displayed to the agent.
+    Block {
+        /// Human-readable gate message shown to the agent.
+        message: String,
+    },
+    /// The tool call is allowed to proceed.
     Approve,
 }
 
