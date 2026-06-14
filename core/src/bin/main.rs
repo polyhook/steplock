@@ -12,6 +12,9 @@ fn main() {
         [flag] if flag == "--version" || flag == "-V" => {
             println!("steplock {}", env!("CARGO_PKG_VERSION"));
         }
+        [flag] if flag == "--help" || flag == "-h" => {
+            print_help();
+        }
         [cmd] if cmd == "init" => {
             if let Err(e) = run_init(&env::current_dir().unwrap()) {
                 eprintln!("steplock: init failed: {e}");
@@ -21,10 +24,30 @@ fn main() {
         [] => run_hook(),
         _ => {
             eprintln!("steplock: unknown arguments");
-            eprintln!("Usage: steplock [--version | init]");
+            eprintln!("Run 'steplock --help' for usage.");
             process::exit(1);
         }
     }
+}
+
+fn print_help() {
+    println!(
+        "steplock {} — stateful quality gate for AI agent hooks
+
+USAGE:
+    steplock              Run as a polyhook hook (reads event from stdin)
+    steplock init         Scaffold .steplock/checklists/ in the current repo
+    steplock --version    Print version and exit
+    steplock --help       Print this message and exit
+
+DESCRIPTION:
+    steplock intercepts AI agent tool calls via polyhook hooks and blocks
+    commands until a checklist of quality steps has been acknowledged.
+    Checklists are defined as Mermaid state diagrams in .steplock/checklists/.
+
+    See https://github.com/polyhook/steplock for setup instructions.",
+        env!("CARGO_PKG_VERSION")
+    );
 }
 
 fn run_hook() {
