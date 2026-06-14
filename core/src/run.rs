@@ -18,8 +18,13 @@ use crate::state::{init_state, load_state, save_state, HookEvent, HookResponse, 
 ///
 /// # Errors
 ///
-/// Returns an error if any checklist config, flow file, or session state cannot
-/// be read or written, or if a CEL expression fails to evaluate.
+/// Returns `Err` if a checklist config or flow file fails to parse, or if
+/// session state I/O fails.
+///
+/// # Panics
+///
+/// Panics if `parse_mmd` returns a `FlowGraph` with an empty initial-state
+/// list, which `parse_mmd` guarantees cannot happen.
 pub fn run(event: &HookEvent, repo_root: &Path) -> Result<HookResponse> {
     let steplock_dir = repo_root.join(".steplock");
 

@@ -34,14 +34,12 @@ pub struct ChecklistConfig {
     pub allow_preview_request: bool,
 }
 
-/// Parse a checklist `config.toml` from `content`.
-///
-/// `path` is used only for error messages.
+/// Parse checklist configuration from a TOML string.
 ///
 /// # Errors
 ///
-/// Returns [`crate::SteplockError::Toml`] if `content` is not valid TOML or does
-/// not match the expected schema.
+/// Returns `Err` if `content` is not valid TOML or does not match the
+/// `ChecklistConfig` schema.
 pub fn parse_config(path: &str, content: &str) -> crate::Result<ChecklistConfig> {
     toml::from_str(content).map_err(|e| crate::error::SteplockError::Toml {
         path: path.to_owned(),

@@ -7,12 +7,17 @@ use cel_interpreter::{Context, Program};
 use crate::error::{Result, SteplockError};
 use crate::state::HookEvent;
 
-/// Returns `true` if `expr` evaluates to a truthy value against `event`.
-/// Returns `true` when `expr` is `None` (no filter = match all).
+/// Returns true if `expr` evaluates to a truthy value against `event`.
+/// Returns true when `expr` is None (no filter = match all).
 ///
 /// # Errors
 ///
-/// Returns [`crate::SteplockError::Cel`] if the CEL expression fails to compile or evaluate.
+/// Returns `Err` if `expr` fails to compile or execute as a CEL expression.
+///
+/// # Panics
+///
+/// Panics if the CEL context rejects the hardcoded variable names `"event"`,
+/// `"input"`, or `"output"` — which cannot happen in practice.
 pub fn matches_event(event: &HookEvent, expr: &Option<String>) -> Result<bool> {
     let expr = match expr {
         None => return Ok(true),
