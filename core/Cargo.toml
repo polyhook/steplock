@@ -17,6 +17,10 @@ missing_docs = "deny"
 [package.metadata.docs.rs]
 all-features = true
 
+[lints.rust]
+missing_debug_implementations = "deny"
+missing_copy_implementations = "deny"
+
 # Clippy lints are ratcheted to `deny` incrementally — every PR promotes at
 # least one more (see .steplock/checklists/pre-push).
 [lints.clippy]

@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 /// Controls when the checklist state is reset between invocations.
-#[derive(Debug, Clone, Default, Deserialize, Serialize)]
+#[derive(Debug, Clone, Copy, Default, Deserialize, Serialize)]
 #[non_exhaustive]
 #[serde(rename_all = "snake_case")]
 pub enum Reset {
