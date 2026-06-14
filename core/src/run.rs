@@ -260,7 +260,7 @@ fn build_block_message(
         // Branching — show all real options
         msg.push_str("When finished, run one of:\n");
         for next in &visible {
-            let next_label = flow.labels.get(*next).map_or(next.as_str(), String::as_str);
+            let next_label = flow.labels.get(*next).map_or(next.as_str(), |s| s.as_str());
             writeln!(msg, "  sh {ack_path} {next}   — {next_label}").unwrap();
         }
         msg.push_str("Then retry your original command.");
@@ -269,11 +269,7 @@ fn build_block_message(
     if allow_preview && state.visited.is_empty() {
         let preview = session_dir.join("preview.sh");
         let preview_path = preview.display();
-        write!(
-            msg,
-            "\n(Tip: run sh {preview_path} to see all items first.)"
-        )
-        .unwrap();
+        write!(msg, "\n(Tip: run sh {preview_path} to see all items first.)").unwrap();
     }
 
     msg
