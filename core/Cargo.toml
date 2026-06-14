@@ -62,6 +62,9 @@ shadow_unrelated = "deny"
 assertions_on_result_states = "deny"[dependencies]
 cel-interpreter = "0.8"
 chrono = { version = "0.4", features = ["serde"] }
+exhaustive_structs = "deny"
+exhaustive_enums = "deny"
+
 polyhook = "0.1.5"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"

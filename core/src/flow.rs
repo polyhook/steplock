@@ -4,6 +4,7 @@ use crate::error::{Result, SteplockError};
 
 /// Parsed representation of a Mermaid `stateDiagram-v2` checklist flow.
 #[derive(Debug, Clone)]
+#[non_exhaustive]
 pub struct FlowGraph {
     /// States reachable from `[*]` (the initial states).
     pub initial: Vec<String>,

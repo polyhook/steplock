@@ -68,6 +68,7 @@ pub fn init_state(checklist: &str, initial_state: &str) -> SessionState {
 
 /// Normalized hook event passed in from the polyhook layer.
 #[derive(Debug, Clone)]
+#[non_exhaustive]
 pub struct HookEvent {
     /// Polyhook event type: `"tool:before"`, `"tool:after"`, `"session:start"`, etc.
     pub event: String,
@@ -81,6 +82,26 @@ pub struct HookEvent {
     pub session_id: String,
     /// Caller identifier: `"claude-code"`, `"cursor"`, etc.
     pub caller: String,
+}
+
+impl HookEvent {
+    pub fn new(
+        event: String,
+        tool: String,
+        input: HashMap<String, serde_json::Value>,
+        output: HashMap<String, serde_json::Value>,
+        session_id: String,
+        caller: String,
+    ) -> Self {
+        Self {
+            event,
+            tool,
+            input,
+            output,
+            session_id,
+            caller,
+        }
+    }
 }
 
 /// Response returned to the polyhook layer.

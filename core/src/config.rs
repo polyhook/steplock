@@ -2,6 +2,7 @@ use serde::{Deserialize, Serialize};
 
 /// Controls when the checklist state is reset between invocations.
 #[derive(Debug, Clone, Default, Deserialize, Serialize)]
+#[non_exhaustive]
 #[serde(rename_all = "snake_case")]
 pub enum Reset {
     /// Reset per session: state persists within a session and resets on the next
@@ -15,6 +16,7 @@ pub enum Reset {
 
 /// Parsed representation of a checklist's `config.toml`.
 #[derive(Debug, Clone, Deserialize)]
+#[non_exhaustive]
 pub struct ChecklistConfig {
     /// Polyhook event type that activates this checklist, e.g. `"tool:before"`.
     pub on_event: String,
