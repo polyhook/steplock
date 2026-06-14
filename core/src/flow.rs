@@ -95,6 +95,21 @@ pub fn parse_mmd(path: &str, content: &str) -> Result<FlowGraph> {
     // Build topological order via BFS from initial states.
     let order = topo_order(&initial, &transitions);
 
+    // Verify every reachable state has a path to [*].  A state without such a
+    // path is either part of a cycle or a dead end — both cause the checklist
+    // to block forever and should be caught at parse time.
+    let can_finish = states_that_can_reach_terminal(&terminal, &transitions);
+    for state in &order {
+        if !can_finish.contains(state.as_str()) {
+            return Err(SteplockError::Mermaid {
+                path: path.to_owned(),
+                message: format!(
+                    "state '{state}' has no path to [*] — check for cycles or dead ends"
+                ),
+            });
+        }
+    }
+
     Ok(FlowGraph {
         initial,
         transitions,
@@ -113,6 +128,39 @@ fn split_label(line: &str) -> Option<(&str, &str)> {
     // Called only when split_transition returned None (no "-->").
     let pos = line.find(':')?;
     Some((&line[..pos], &line[pos + 1..]))
+}
+
+/// Returns the set of state names that have at least one path to `[*]`.
+/// Uses reverse BFS: start from terminal states and walk backwards.
+fn states_that_can_reach_terminal<'a>(
+    terminal: &'a HashSet<String>,
+    transitions: &'a HashMap<String, Vec<String>>,
+) -> HashSet<&'a str> {
+    // Build reverse adjacency (target → sources).
+    let mut reverse: HashMap<&str, Vec<&str>> = HashMap::new();
+    for (from, tos) in transitions {
+        for to in tos {
+            if to != "[*]" {
+                reverse.entry(to.as_str()).or_default().push(from.as_str());
+            }
+        }
+    }
+
+    let mut reachable: HashSet<&str> = HashSet::new();
+    let mut queue: std::collections::VecDeque<&str> = terminal.iter().map(|s| s.as_str()).collect();
+
+    while let Some(state) = queue.pop_front() {
+        if reachable.contains(state) {
+            continue;
+        }
+        reachable.insert(state);
+        if let Some(preds) = reverse.get(state) {
+            for pred in preds {
+                queue.push_back(pred);
+            }
+        }
+    }
+    reachable
 }
 
 fn topo_order(initial: &[String], transitions: &HashMap<String, Vec<String>>) -> Vec<String> {
@@ -274,11 +322,43 @@ stateDiagram-v2
 
     #[test]
     fn state_with_no_outgoing_transitions_included_in_order() {
-        // "leaf" has no outgoing transitions → transitions.get("leaf") returns None
-        let mmd = "stateDiagram-v2\n    [*] --> root\n    root --> leaf\n    root : Root\n    leaf : Leaf\n";
+        // "leaf" is a terminal state (only → [*]), so transitions.get("leaf")
+        // returns only the pseudo-entry for [*], and next_states("leaf") is empty.
+        let mmd = "stateDiagram-v2\n    [*] --> root\n    root --> leaf\n    leaf --> [*]\n    root : Root\n    leaf : Leaf\n";
         let g = parse_mmd("test.mmd", mmd).unwrap();
         assert!(g.order.contains(&"leaf".to_owned()));
         assert!(g.next_states("leaf").is_empty());
+    }
+
+    #[test]
+    fn error_on_cycle_with_no_exit() {
+        // step_a and step_b form a cycle; neither reaches [*]
+        let mmd =
+            "stateDiagram-v2\n    [*] --> step_a\n    step_a --> step_b\n    step_b --> step_a\n";
+        let err = parse_mmd("test.mmd", mmd).unwrap_err();
+        let msg = err.to_string();
+        assert!(msg.contains("no path to [*]"), "got: {msg}");
+    }
+
+    #[test]
+    fn error_on_dead_end_state() {
+        // step_b has no outgoing transition — it can never reach [*]
+        let mmd =
+            "stateDiagram-v2\n    [*] --> step_a\n    step_a --> step_b\n    step_a --> [*]\n";
+        let err = parse_mmd("test.mmd", mmd).unwrap_err();
+        let msg = err.to_string();
+        assert!(msg.contains("no path to [*]"), "got: {msg}");
+    }
+
+    #[test]
+    fn cycle_with_exit_is_valid() {
+        // step_a has both a cycle to step_b AND a path to [*] — valid
+        let mmd = "stateDiagram-v2\n    [*] --> step_a\n    step_a --> step_b\n    step_b --> step_a\n    step_a --> [*]\n";
+        // step_b still has no path to [*] (only step_a does, and step_b can reach step_a)
+        // Actually step_b → step_a → [*] IS a path, so this should be valid.
+        // step_b can reach [*] via step_b → step_a → [*]
+        let g = parse_mmd("test.mmd", mmd).unwrap();
+        assert!(g.terminal.contains("step_a"));
     }
 
     #[test]
