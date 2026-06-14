@@ -24,10 +24,16 @@ fn main() {
         [cmd] if cmd == "validate" => {
             run_validate(&env::current_dir().unwrap());
         }
+        [cmd] if cmd == "clean" => {
+            if let Err(e) = run_clean(&env::current_dir().unwrap()) {
+                eprintln!("steplock: clean failed: {e}");
+                process::exit(1);
+            }
+        }
         [] => run_hook(),
         _ => {
             eprintln!("steplock: unknown arguments");
-            eprintln!("Usage: steplock [--version | init | validate]");
+            eprintln!("Usage: steplock [--version | init | validate | clean]");
             process::exit(1);
         }
     }
@@ -130,6 +136,42 @@ fn run_validate(dir: &Path) {
         }
         process::exit(1);
     }
+}
+
+/// Remove all session directories under `.steplock/sessions/`.
+///
+/// AI agent sessions that crash or are killed never fire `session:stop`, so their
+/// session directories accumulate indefinitely. `steplock clean` flushes them all.
+/// The next hook invocation will start each checklist fresh.
+fn run_clean(dir: &Path) -> std::io::Result<()> {
+    let steplock_dir = match find_repo_root_from(dir) {
+        Some(root) => root.join(".steplock"),
+        None => {
+            println!("steplock: no .steplock/ directory found — nothing to clean");
+            return Ok(());
+        }
+    };
+    let sessions_dir = steplock_dir.join("sessions");
+    if !sessions_dir.exists() {
+        println!("steplock: no sessions to clean");
+        return Ok(());
+    }
+    let mut removed = 0u32;
+    for entry in fs::read_dir(&sessions_dir)?.flatten() {
+        let path = entry.path();
+        if path.is_dir() {
+            fs::remove_dir_all(&path)?;
+            removed += 1;
+        } else {
+            fs::remove_file(&path)?;
+        }
+    }
+    if removed == 0 {
+        println!("steplock: no sessions to clean");
+    } else {
+        println!("steplock: removed {removed} session(s)");
+    }
+    Ok(())
 }
 
 /// Parse the hook event from `reader`, run the gate, and return the polyhook response.
@@ -350,5 +392,50 @@ reset = "session"
         fs::create_dir_all(tmp.path().join(".steplock/checklists")).unwrap();
         // Second call should not error
         run_init(tmp.path()).unwrap();
+    }
+
+    #[test]
+    fn clean_removes_session_dirs() {
+        let tmp = TempDir::new().unwrap();
+        fs::create_dir_all(tmp.path().join(".steplock/sessions/sess-abc/gate")).unwrap();
+        fs::create_dir_all(tmp.path().join(".steplock/sessions/sess-xyz/gate")).unwrap();
+        run_clean(tmp.path()).unwrap();
+        assert!(!tmp.path().join(".steplock/sessions/sess-abc").exists());
+        assert!(!tmp.path().join(".steplock/sessions/sess-xyz").exists());
+    }
+
+    #[test]
+    fn clean_removes_fallback_id_file() {
+        let tmp = TempDir::new().unwrap();
+        let sessions = tmp.path().join(".steplock/sessions");
+        fs::create_dir_all(&sessions).unwrap();
+        fs::write(sessions.join("fallback-id"), "some-uuid").unwrap();
+        run_clean(tmp.path()).unwrap();
+        assert!(!sessions.join("fallback-id").exists());
+    }
+
+    #[test]
+    fn clean_is_noop_when_no_sessions_dir() {
+        let tmp = TempDir::new().unwrap();
+        fs::create_dir_all(tmp.path().join(".steplock/checklists")).unwrap();
+        // No sessions/ dir — should succeed without error
+        run_clean(tmp.path()).unwrap();
+    }
+
+    #[test]
+    fn clean_is_noop_when_no_steplock_dir() {
+        let tmp = TempDir::new().unwrap();
+        // No .steplock/ at all — should succeed without error
+        run_clean(tmp.path()).unwrap();
+    }
+
+    #[test]
+    fn clean_leaves_sessions_dir_intact() {
+        let tmp = TempDir::new().unwrap();
+        let sessions = tmp.path().join(".steplock/sessions");
+        fs::create_dir_all(sessions.join("sess-1/gate")).unwrap();
+        run_clean(tmp.path()).unwrap();
+        // sessions/ dir itself remains (only contents removed)
+        assert!(sessions.exists());
     }
 }
