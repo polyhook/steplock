@@ -367,16 +367,20 @@ mod proptest_tests {
     use crate::state::HookEvent;
 
     fn arb_event() -> impl Strategy<Value = HookEvent> {
-        (any::<String>(), any::<String>(), any::<String>(), any::<String>()).prop_map(
-            |(event, tool, session_id, caller)| HookEvent {
+        (
+            any::<String>(),
+            any::<String>(),
+            any::<String>(),
+            any::<String>(),
+        )
+            .prop_map(|(event, tool, session_id, caller)| HookEvent {
                 event,
                 tool,
                 session_id,
                 caller,
                 input: HashMap::new(),
                 output: HashMap::new(),
-            },
-        )
+            })
     }
 
     proptest! {
