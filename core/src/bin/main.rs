@@ -42,7 +42,7 @@ fn main() {
         [] => run_hook(),
         _ => {
             eprintln!("steplock: unknown arguments");
-            eprintln!("Usage: steplock [--version | init | validate | clean]");
+            eprintln!("Run 'steplock --help' for usage.");
             process::exit(1);
         }
     }
@@ -50,20 +50,22 @@ fn main() {
 
 fn print_help() {
     println!(
-        "steplock {} — stateful quality gate for AI agent hooks
+        "steplock {}
+
+Stateful quality gate for AI coding agents.
 
 USAGE:
-    steplock              Run as a polyhook hook (reads event from stdin)
-    steplock init         Scaffold .steplock/checklists/ in the current repo
-    steplock --version    Print version and exit
-    steplock --help       Print this message and exit
+    steplock               Read hook event from stdin and respond (used by polyhook)
+    steplock init          Create .steplock/checklists/ in the current directory
+    steplock validate      Check all checklist configs for errors
+    steplock clean         Remove all session state (forces checklists to restart)
+    steplock --version     Print version
 
-DESCRIPTION:
-    steplock intercepts AI agent tool calls via polyhook hooks and blocks
-    commands until a checklist of quality steps has been acknowledged.
-    Checklists are defined as Mermaid state diagrams in .steplock/checklists/.
+CHECKLIST FILES:
+    .steplock/checklists/<name>/config.toml   Gate trigger and reset configuration
+    .steplock/checklists/<name>/flow.mmd      Mermaid stateDiagram-v2 checklist flow
 
-    See https://github.com/polyhook/steplock for setup instructions.",
+For more information: https://github.com/polyhook/steplock",
         env!("CARGO_PKG_VERSION")
     );
 }
@@ -137,6 +139,7 @@ fn run_validate(repo_root: &Path) -> std::io::Result<bool> {
     }
     Ok(all_ok)
 }
+
 
 fn run_hook() {
     let repo_root = find_repo_root_from(&env::current_dir().unwrap())
