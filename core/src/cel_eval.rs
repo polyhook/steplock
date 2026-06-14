@@ -359,4 +359,38 @@ mod tests {
         )
         .unwrap());
     }
+
+    // Regression: `command_words` includes message text, so "push" in a commit
+    // body must not trigger the pre-push gate.  The guard is to also require
+    // that "commit" is absent (real git push commands never have that word).
+    #[test]
+    fn pre_push_expr_does_not_trigger_on_commit_with_push_in_message() {
+        let ev = event_with_cmd("git -C /repo commit -m \"add CI push path filter\"");
+        let safe_expr = "input.command_words.exists(x, x == 'push') && !input.command_words.exists(x, x == 'commit')";
+        assert!(!matches_event(&ev, &Some(safe_expr.to_owned())).unwrap());
+    }
+
+    #[test]
+    fn pre_push_expr_still_matches_git_push() {
+        let ev = event_with_cmd("git -C /repo push origin main");
+        let safe_expr = "input.command_words.exists(x, x == 'push') && !input.command_words.exists(x, x == 'commit')";
+        assert!(matches_event(&ev, &Some(safe_expr.to_owned())).unwrap());
+    }
+
+    // Regression: `command_words` includes flags and body text passed to other
+    // commands (e.g. `gh pr create --body "...commit..."`) — the safe guard is
+    // to also require that "git" is present so non-git tools don't match.
+    #[test]
+    fn pre_commit_expr_does_not_trigger_on_gh_pr_create_with_commit_in_body() {
+        let ev = event_with_cmd("gh pr create --body \"A commit was merged\"");
+        let safe_expr = "input.command_words.exists(x, x == 'commit') && input.command_words.exists(x, x == 'git')";
+        assert!(!matches_event(&ev, &Some(safe_expr.to_owned())).unwrap());
+    }
+
+    #[test]
+    fn pre_commit_expr_still_matches_git_commit() {
+        let ev = event_with_cmd("git -C /repo commit -m \"fix bug\"");
+        let safe_expr = "input.command_words.exists(x, x == 'commit') && input.command_words.exists(x, x == 'git')";
+        assert!(matches_event(&ev, &Some(safe_expr.to_owned())).unwrap());
+    }
 }
