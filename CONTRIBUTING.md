@@ -38,7 +38,7 @@ RUSTDOCFLAGS="-D warnings" cargo doc --manifest-path core/Cargo.toml --no-deps
 
 ```
 core/          Rust crate (library + binary)
-scripts/       Shell scripts embedded in the binary (ack.sh)
+core/scripts/  Shell scripts embedded in the binary (ack.sh)
 schemas/       JSON Schema files for config.toml and state.json
 examples/      Working reference configurations
 ```
@@ -48,7 +48,7 @@ examples/      Working reference configurations
 - **New checklist logic** — add to `core/src/run.rs`; unit tests live in the same file
 - **CEL evaluation** — `core/src/cel_eval.rs`
 - **Mermaid parsing** — `core/src/flow.rs`
-- **Shell scripts** — edit `scripts/ack.sh`; the binary embeds it via `include_str!` so a rebuild picks up your changes
+- **Shell scripts** — edit `core/scripts/ack.sh`; the binary embeds it via `include_str!` so a rebuild picks up your changes
 - **Schema** — update `schemas/checklist-config.schema.json` and the corresponding Rust struct in `core/src/config.rs`
 
 ## Submitting a pull request

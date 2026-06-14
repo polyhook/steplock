@@ -4,7 +4,7 @@ use std::path::Path;
 use crate::error::Result;
 use crate::flow::FlowGraph;
 
-static ACK_SH: &str = include_str!("../../scripts/ack.sh");
+static ACK_SH: &str = include_str!("../scripts/ack.sh");
 
 /// Write ack.sh to `dir` only if it does not already exist.
 ///

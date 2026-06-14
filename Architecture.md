@@ -172,7 +172,7 @@ steplock
 
 `.steplock/sessions/<scope-key>/state.json` — single source of truth, updated by steplock on each block and by `ack.sh` on each ack. See [`schemas/session-state.schema.json`](schemas/session-state.schema.json).
 
-`.steplock/sessions/<scope-key>/ack.sh` — generic, written once per session. See [`scripts/ack.sh`](scripts/ack.sh).
+`.steplock/sessions/<scope-key>/ack.sh` — generic, written once per session. See [`core/scripts/ack.sh`](core/scripts/ack.sh).
 
 Requires `jq`. Atomic write via temp + `mv` (PID-suffixed temp name avoids collision between concurrent agents).
 
