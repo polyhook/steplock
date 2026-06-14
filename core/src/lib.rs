@@ -1,3 +1,5 @@
+#![forbid(unsafe_code)]
+
 pub mod audit;
 pub mod cel_eval;
 pub mod config;
