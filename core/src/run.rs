@@ -105,10 +105,10 @@ pub fn run(event: &HookEvent, repo_root: &Path) -> Result<HookResponse> {
                     initial_state,
                     "always",
                 );
-                // No session dir for reset=always — use a placeholder path in message
+                // No session dir for reset=always — use a placeholder path in message.
+                // preview is not supported for reset=always (no ack flow, no persisted dir).
                 let tmp_dir = steplock_dir.join("sessions").join("always");
-                let message =
-                    build_block_message(&state, &flow, &tmp_dir, config.allow_preview_request);
+                let message = build_block_message(&state, &flow, &tmp_dir, false);
                 eprintln!("steplock: block [{checklist_name}] state={initial_state}");
                 return Ok(HookResponse::Block { message });
             }
@@ -571,6 +571,44 @@ reset = "session"
             assert!(message.contains("pass"));
             assert!(message.contains("skip"));
             assert!(message.contains("run one of:"));
+        } else {
+            panic!("expected block");
+        }
+    }
+
+    #[test]
+    fn reset_always_with_allow_preview_does_not_show_preview_tip() {
+        let tmp = TempDir::new().unwrap();
+        let cl_dir = tmp.path().join(".steplock/checklists/always-preview");
+        fs::create_dir_all(&cl_dir).unwrap();
+        fs::write(
+            cl_dir.join("config.toml"),
+            r#"on_event = "tool:before"
+on_tool = "bash"
+match_input = "input.command.contains('git push')"
+reset = "always"
+allow_preview_request = true
+"#,
+        )
+        .unwrap();
+        fs::write(
+            cl_dir.join("flow.mmd"),
+            r#"stateDiagram-v2
+    [*] --> check
+    check --> [*]
+    check: Did you check?
+"#,
+        )
+        .unwrap();
+
+        let event = make_event("tool:before", "bash", "git push origin main", "sess-ap");
+        let resp = run(&event, tmp.path()).unwrap();
+        if let HookResponse::Block { message } = resp {
+            // preview.sh is never written for reset=always, so tip must not appear
+            assert!(
+                !message.contains("preview.sh"),
+                "should not reference non-existent preview.sh: {message}"
+            );
         } else {
             panic!("expected block");
         }
