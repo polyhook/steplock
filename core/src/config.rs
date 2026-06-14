@@ -21,6 +21,9 @@ pub struct ChecklistConfig {
     pub allow_preview_request: bool,
 }
 
+/// # Errors
+///
+/// Returns `Err` if `content` is not valid TOML or does not match the `ChecklistConfig` schema.
 pub fn parse_config(path: &str, content: &str) -> crate::Result<ChecklistConfig> {
     toml::from_str(content).map_err(|e| crate::error::SteplockError::Toml {
         path: path.to_owned(),
