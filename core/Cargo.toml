@@ -67,6 +67,7 @@ assertions_on_result_states = "deny"[dependencies]
 missing_panics_doc = "deny"
 absolute_paths = "deny"
 indexing_slicing = "deny"
+assertions_on_result_states = "deny"
 
 cel-interpreter = "0.8"
 chrono = { version = "0.4", features = ["serde"] }
