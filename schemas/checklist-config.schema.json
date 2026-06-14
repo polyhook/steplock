@@ -21,7 +21,8 @@
     },
     "on_tool": {
       "type": "string",
-      "description": "Normalized polyhook tool name to match (e.g. 'bash', 'write_file'). Omit or set to \"\" to match any tool.",
+      "description": "Normalized polyhook tool name to match (e.g. 'bash', 'write_file'). Omit or set to '' to match any tool.",
+      "default": "",
       "examples": ["bash", "write_file", "read_file", "list_directory"]
     },
     "match_input": {
