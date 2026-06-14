@@ -292,6 +292,7 @@ fn build_block_message(
 }
 
 #[cfg(test)]
+#[allow(clippy::panic)]
 mod tests {
     use super::*;
     use std::collections::HashMap;

@@ -66,6 +66,7 @@ exhaustive_structs = "deny"
 exhaustive_enums = "deny"
 needless_raw_string_hashes = "deny"
 missing_panics_doc = "deny"
+panic = "deny"
 
 polyhook = "0.1.5"
 serde = { version = "1", features = ["derive"] }
