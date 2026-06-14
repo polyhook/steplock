@@ -1,3 +1,4 @@
+//! Session state persistence and core domain types.
 use std::collections::HashMap;
 use std::fs;
 use std::path::Path;
@@ -6,21 +7,29 @@ use serde::{Deserialize, Serialize};
 
 use crate::error::Result;
 
+/// Persisted checklist progress for one session + checklist combination.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SessionState {
+    /// Name of the owning checklist directory.
     pub checklist: String,
+    /// Current Mermaid state identifier (e.g. `"tests_pass"` or `"[*]"`).
     pub current_state: String,
+    /// Next state to advance to on acknowledgement, when there is exactly one outgoing transition.
     pub next_state: Option<String>,
+    /// All outgoing transitions from `current_state` (including `"[*]"`).
     pub transitions: Vec<String>,
+    /// States that have already been acknowledged in this session.
     pub visited: Vec<String>,
 }
 
 impl SessionState {
+    /// True when the checklist has reached its terminal `[*]` state.
     pub fn is_complete(&self) -> bool {
         self.current_state == "[*]"
     }
 }
 
+/// Load [`SessionState`] from a JSON file on disk.
 pub fn load_state(path: &Path) -> Result<SessionState> {
     let content = fs::read_to_string(path)?;
     Ok(serde_json::from_str(&content)?)
@@ -68,7 +77,12 @@ pub struct HookEvent {
 #[derive(Debug)]
 #[non_exhaustive]
 pub enum HookResponse {
-    Block { message: String },
+    /// Block the tool call and show `message` to the AI agent.
+    Block {
+        /// Human-readable gate message displayed to the agent.
+        message: String,
+    },
+    /// Allow the tool call to proceed.
     Approve,
 }
 

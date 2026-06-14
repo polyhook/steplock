@@ -1,3 +1,4 @@
+//! CEL (Common Expression Language) evaluation for `match_input` config fields.
 use std::collections::HashMap;
 use std::sync::Arc;
 

@@ -1,26 +1,36 @@
+//! Checklist configuration parsed from `config.toml`.
 use serde::{Deserialize, Serialize};
 
+/// Controls when a checklist resets between invocations.
 #[derive(Debug, Clone, Default, Deserialize, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub enum Reset {
+    /// Reset per session — one acknowledgement sequence per agent session (default).
     #[default]
     Session,
+    /// Reset on every invocation — block unconditionally each time the event fires.
     Always,
 }
 
+/// Parsed representation of a checklist's `config.toml`.
 #[derive(Debug, Clone, Deserialize)]
 pub struct ChecklistConfig {
+    /// Polyhook event type that triggers this checklist (e.g. `"tool:before"`).
     pub on_event: String,
     /// Tool name to match (e.g. `"bash"`). Omit or set to `""` to match any tool.
     #[serde(default)]
     pub on_tool: String,
+    /// Optional CEL expression; checklist only fires when this evaluates to true.
     pub match_input: Option<String>,
+    /// When to reset the checklist state.
     #[serde(default)]
     pub reset: Reset,
+    /// Whether to emit a `preview.sh` tip on the first block.
     #[serde(default)]
     pub allow_preview_request: bool,
 }
 
+/// Parse a checklist `config.toml` from a string.
 pub fn parse_config(path: &str, content: &str) -> crate::Result<ChecklistConfig> {
     toml::from_str(content).map_err(|e| crate::error::SteplockError::Toml {
         path: path.to_owned(),

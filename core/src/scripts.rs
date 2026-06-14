@@ -1,3 +1,4 @@
+//! Generates `ack.sh` and `preview.sh` helper scripts in session directories.
 use std::fs;
 use std::os::unix::fs::PermissionsExt;
 use std::path::Path;
