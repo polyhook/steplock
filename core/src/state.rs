@@ -46,7 +46,7 @@ pub fn load_state(path: &Path) -> Result<SessionState> {
 ///
 /// Returns an error if the file cannot be written or renamed.
 pub fn save_state(path: &Path, state: &SessionState) -> Result<()> {
-    let dir = path.parent().unwrap_or(Path::new("."));
+    let dir = path.parent().unwrap_or_else(|| Path::new("."));
     let tmp = dir.join(format!("state.json.tmp.{}", std::process::id()));
     let content = serde_json::to_string_pretty(state)?;
     fs::write(&tmp, content)?;

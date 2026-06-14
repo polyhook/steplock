@@ -55,6 +55,7 @@ manual_assert = "deny"
 single_char_pattern = "deny"
 explicit_iter_loop = "deny"
 option_if_let_else = "deny"
+or_fun_call = "deny"
 
 [dependencies]
 cel-interpreter = "0.8"
