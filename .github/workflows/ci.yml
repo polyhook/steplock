@@ -6,6 +6,7 @@ on:
     paths:
       - "core/**"
       - ".github/workflows/ci.yml"
+      - ".steplock/checklists/**"
   pull_request:
     branches: [main]
 
@@ -130,6 +131,9 @@ jobs:
 
       - name: Verify package tarball compiles
         run: cargo package --manifest-path core/Cargo.toml
+
+      - name: Validate checklists
+        run: cargo run --manifest-path core/Cargo.toml -- validate
 
   build:
     name: Build release binary
