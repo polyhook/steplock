@@ -310,11 +310,11 @@ reset = "session"
         .unwrap();
         fs::write(
             cl_dir.join("flow.mmd"),
-            r#"stateDiagram-v2
+            r"stateDiagram-v2
     [*] --> check
     check --> [*]
     check: Did you check?
-"#,
+",
         )
         .unwrap();
     }
