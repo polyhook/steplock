@@ -49,6 +49,7 @@ doc_markdown = "deny"
 str_to_string = "deny"
 multiple_inherent_impl = "deny"
 match_wildcard_for_single_variants = "deny"
+manual_assert = "deny"
 
 [dependencies]
 cel-interpreter = "0.8"
@@ -70,4 +71,5 @@ lto = "thin"
 codegen-units = 1
 
 [dev-dependencies]
+proptest = "1"
 tempfile = "3"
