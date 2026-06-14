@@ -41,6 +41,8 @@ impl FlowGraph {
     }
 }
 
+/// # Errors
+/// Returns `SteplockError::Mermaid` if the diagram has no initial `[*] --> <state>` transition.
 pub fn parse_mmd(path: &str, content: &str) -> Result<FlowGraph> {
     let mut transitions: HashMap<String, Vec<String>> = HashMap::new();
     let mut labels: HashMap<String, String> = HashMap::new();

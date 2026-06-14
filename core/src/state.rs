@@ -21,12 +21,17 @@ impl SessionState {
     }
 }
 
+/// # Errors
+/// Returns `SteplockError::Io` if the file cannot be read, or `SteplockError::Json` if malformed.
 pub fn load_state(path: &Path) -> Result<SessionState> {
     let content = fs::read_to_string(path)?;
     Ok(serde_json::from_str(&content)?)
 }
 
 /// Atomically write state via temp + mv (POSIX mv is atomic same-filesystem).
+///
+/// # Errors
+/// Returns `SteplockError::Io` on I/O failure, or `SteplockError::Json` on serialization error.
 pub fn save_state(path: &Path, state: &SessionState) -> Result<()> {
     let dir = path.parent().unwrap_or(Path::new("."));
     let tmp = dir.join(format!("state.json.tmp.{}", std::process::id()));

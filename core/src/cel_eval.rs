@@ -9,6 +9,9 @@ use crate::state::HookEvent;
 
 /// Returns true if `expr` evaluates to a truthy value against `event`.
 /// Returns true when `expr` is None (no filter = match all).
+///
+/// # Errors
+/// Returns `SteplockError::Cel` if `expr` fails to compile or execute.
 pub fn matches_event(event: &HookEvent, expr: &Option<String>) -> Result<bool> {
     let expr = match expr {
         None => return Ok(true),
