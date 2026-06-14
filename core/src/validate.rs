@@ -101,7 +101,7 @@ reset = "session"
         write_checklist(tmp.path(), "bad-gate", "not valid toml !!!", GOOD_FLOW);
         let errs = validate_checklists(tmp.path());
         assert_eq!(errs.len(), 1);
-        assert!(errs.first().map_or(false, |(l, _)| l.contains("config.toml")));
+        assert!(errs.first().is_some_and(|(l, _)| l.contains("config.toml")));
     }
 
     #[test]
@@ -110,7 +110,7 @@ reset = "session"
         write_checklist(tmp.path(), "bad-gate", GOOD_CONFIG, "not a mermaid diagram");
         let errs = validate_checklists(tmp.path());
         assert_eq!(errs.len(), 1);
-        assert!(errs.first().map_or(false, |(l, _)| l.contains("flow.mmd")));
+        assert!(errs.first().is_some_and(|(l, _)| l.contains("flow.mmd")));
     }
 
     #[test]
@@ -122,7 +122,7 @@ reset = "session"
         // no config.toml
         let errs = validate_checklists(tmp.path());
         assert_eq!(errs.len(), 1);
-        assert!(errs.first().map_or(false, |(l, _)| l.contains("config.toml")));
+        assert!(errs.first().is_some_and(|(l, _)| l.contains("config.toml")));
     }
 
     #[test]
