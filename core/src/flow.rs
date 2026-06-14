@@ -41,6 +41,11 @@ impl FlowGraph {
     }
 }
 
+/// Parse a Mermaid `stateDiagram-v2` string into a `FlowGraph`.
+///
+/// # Errors
+///
+/// Returns `SteplockError::Mermaid` if no `[*] --> <state>` initial transition is found.
 pub fn parse_mmd(path: &str, content: &str) -> Result<FlowGraph> {
     let mut transitions: HashMap<String, Vec<String>> = HashMap::new();
     let mut labels: HashMap<String, String> = HashMap::new();
