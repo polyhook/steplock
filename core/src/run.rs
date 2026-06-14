@@ -128,7 +128,13 @@ pub fn run(event: &HookEvent, repo_root: &Path) -> Result<HookResponse> {
                 // Checklist complete — approve this attempt and reset state so the
                 // next invocation starts the checklist fresh.
                 if state.is_complete() {
-                    audit::append(&steplock_dir, "complete", &checklist_name, "[*]", &scope_key);
+                    audit::append(
+                        &steplock_dir,
+                        "complete",
+                        &checklist_name,
+                        "[*]",
+                        &scope_key,
+                    );
                     save_state(&state_path, &init_state(&checklist_name, initial_state))?;
                     continue;
                 }
@@ -956,5 +962,35 @@ reset = "session"
         let resp = run(&event, tmp.path()).unwrap();
         // Flow doesn't know this state → skip → approve
         assert!(matches!(resp, HookResponse::Approve));
+    }
+
+    #[test]
+    fn complete_event_written_to_audit_log() {
+        let tmp = TempDir::new().unwrap();
+        setup_checklist(tmp.path());
+
+        // Put state at [*] so the gate sees a completed checklist
+        let session_dir = tmp.path().join(".steplock/sessions/sess-audit/quality-gate");
+        fs::create_dir_all(&session_dir).unwrap();
+        let state = SessionState {
+            checklist: "quality-gate".to_owned(),
+            current_state: "[*]".to_owned(),
+            next_state: None,
+            transitions: vec![],
+            visited: vec!["clean_code".to_owned()],
+        };
+        save_state(&session_dir.join("state.json"), &state).unwrap();
+
+        let event = make_event("tool:before", "bash", "git push origin main", "sess-audit");
+        let resp = run(&event, tmp.path()).unwrap();
+        assert!(matches!(resp, HookResponse::Approve));
+
+        let log_path = tmp.path().join(".steplock/audit.log");
+        assert!(log_path.exists(), "audit.log should exist");
+        let content = fs::read_to_string(&log_path).unwrap();
+        let entry: serde_json::Value = serde_json::from_str(content.trim()).unwrap();
+        assert_eq!(entry["event"], "complete");
+        assert_eq!(entry["checklist"], "quality-gate");
+        assert_eq!(entry["session"], "sess-audit");
     }
 }
