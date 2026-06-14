@@ -1,3 +1,4 @@
+//! Session state persistence and core domain types.
 use std::collections::HashMap;
 use std::fs;
 use std::path::Path;

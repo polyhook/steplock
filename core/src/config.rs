@@ -1,3 +1,4 @@
+//! Checklist configuration parsed from `config.toml`.
 use serde::{Deserialize, Serialize};
 
 use crate::SteplockError;

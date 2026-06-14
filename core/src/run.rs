@@ -1,3 +1,4 @@
+//! Core gate logic: evaluates checklists against incoming hook events.
 use std::fmt::Write as _;
 use std::fs;
 use std::path::{Path, PathBuf};

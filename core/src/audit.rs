@@ -1,3 +1,4 @@
+//! Append-only JSONL audit log written on every gate event.
 use std::fs::OpenOptions;
 use std::io::Write;
 use std::path::Path;
