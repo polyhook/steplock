@@ -19,7 +19,7 @@ pub struct FlowGraph {
 impl FlowGraph {
     /// Returns states that are not yet visited and not the pseudo `[*]` node.
     pub fn pending_after(&self, visited: &[String]) -> Vec<String> {
-        let visited_set: HashSet<&str> = visited.iter().map(|s| s.as_str()).collect();
+        let visited_set: HashSet<&str> = visited.iter().map(String::as_str).collect();
         self.order
             .iter()
             .filter(|s| !visited_set.contains(s.as_str()))
@@ -81,7 +81,6 @@ pub fn parse_mmd(path: &str, content: &str) -> Result<FlowGraph> {
         // Label: state : Label text
         if let Some((state, label)) = split_label(line) {
             labels.insert(state.trim().to_owned(), label.trim().to_owned());
-            continue;
         }
     }
 

@@ -1,3 +1,4 @@
+use std::fmt::Write as _;
 use std::fs;
 use std::path::{Path, PathBuf};
 
@@ -241,15 +242,17 @@ fn build_block_message(
 
     if visible.len() <= 1 {
         // Linear — single transition (or terminal → [*])
-        msg.push_str(&format!(
+        write!(
+            msg,
             "When finished, run: sh {ack_path}\nThen retry your original command."
-        ));
+        )
+        .unwrap();
     } else {
         // Branching — show all real options
         msg.push_str("When finished, run one of:\n");
         for next in &visible {
-            let next_label = flow.labels.get(*next).map_or(next.as_str(), |s| s.as_str());
-            msg.push_str(&format!("  sh {ack_path} {next}   — {next_label}\n"));
+            let next_label = flow.labels.get(*next).map_or(next.as_str(), String::as_str);
+            writeln!(msg, "  sh {ack_path} {next}   — {next_label}").unwrap();
         }
         msg.push_str("Then retry your original command.");
     }
@@ -257,9 +260,11 @@ fn build_block_message(
     if allow_preview && state.visited.is_empty() {
         let preview = session_dir.join("preview.sh");
         let preview_path = preview.display();
-        msg.push_str(&format!(
+        write!(
+            msg,
             "\n(Tip: run sh {preview_path} to see all items first.)"
-        ));
+        )
+        .unwrap();
     }
 
     msg
