@@ -93,11 +93,8 @@ fn json_to_cel(v: &serde_json::Value) -> Value {
         serde_json::Value::Null => Value::Null,
         serde_json::Value::Bool(b) => Value::Bool(*b),
         serde_json::Value::Number(n) => {
-            if let Some(i) = n.as_i64() {
-                Value::Int(i)
-            } else {
-                Value::Float(n.as_f64().unwrap_or(0.0))
-            }
+            n.as_i64()
+                .map_or_else(|| Value::Float(n.as_f64().unwrap_or(0.0)), Value::Int)
         }
         serde_json::Value::String(s) => cel_str(s),
         serde_json::Value::Array(arr) => {
