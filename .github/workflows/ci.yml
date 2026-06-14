@@ -70,5 +70,12 @@ jobs:
       - name: Build release binary
         run: cargo build --manifest-path core/Cargo.toml --release
 
-      - name: Smoke-test binary exists and runs
-        run: test -f core/target/release/steplock
+      - name: Smoke-test binary runs
+        run: |
+          BIN="$(pwd)/core/target/release/steplock"
+          test -f "$BIN"
+          "$BIN" --version
+          tmp=$(mktemp -d)
+          cd "$tmp" && "$BIN" init
+          echo '{"hook_event_name":"PreToolUse","tool_name":"Bash","tool_input":{"command":"ls"},"session_id":"smoke"}' \
+            | "$BIN"
