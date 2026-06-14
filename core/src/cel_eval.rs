@@ -113,7 +113,7 @@ fn json_to_cel(v: &serde_json::Value) -> Value {
     }
 }
 
-fn is_truthy(v: &Value) -> bool {
+const fn is_truthy(v: &Value) -> bool {
     match v {
         Value::Bool(b) => *b,
         Value::Null => false,
