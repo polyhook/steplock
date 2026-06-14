@@ -1,3 +1,4 @@
+//! `steplock` CLI binary — invoked by polyhook as a pre-tool hook.
 use std::env;
 use std::fs;
 use std::io::Read;
