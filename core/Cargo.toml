@@ -48,16 +48,15 @@ from_iter_instead_of_collect = "deny"
 doc_markdown = "deny"
 str_to_string = "deny"
 multiple_inherent_impl = "deny"
-
 [dependencies]
+cel-interpreter = "0.8"
+chrono = { version = "0.4", features = ["serde"] }
 polyhook = "0.1.5"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
-toml = "0.8"
-cel-interpreter = "0.8"
-uuid = { version = "1", features = ["v4"] }
 thiserror = "1"
-chrono = { version = "0.4", features = ["serde"] }
+toml = "0.8"
+uuid = { version = "1", features = ["v4"] }
 
 [[bin]]
 name = "steplock"
