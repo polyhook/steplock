@@ -1,0 +1,6 @@
+#:schema https://raw.githubusercontent.com/polyhook/steplock/refs/heads/main/schemas/checklist-config.schema.json
+
+on_event = "tool:before"
+on_tool = "read_file"
+match_input = "input.path.startsWith('/etc') || input.path.endsWith('.env') || input.path.endsWith('.key') || input.path.endsWith('.pem')"
+reset = "always"
