@@ -80,7 +80,7 @@ chrono = { version = "0.4", features = ["serde"] }
 polyhook = "0.1.5"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
-thiserror = "1"
+thiserror = "2"
 toml = "0.8"
 uuid = { version = "1", features = ["v4"] }
 
