@@ -116,6 +116,21 @@ jobs:
           path: lcov.info
           retention-days: 7
 
+  package:
+    name: Verify cargo package
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Verify package builds and include_str paths resolve
+        run: cargo package --manifest-path core/Cargo.toml --no-verify
+
+      - name: Verify package tarball compiles
+        run: cargo package --manifest-path core/Cargo.toml
+
   build:
     name: Build release binary
     runs-on: ${{ matrix.os }}
