@@ -1,5 +1,4 @@
 use std::fs;
-use std::os::unix::fs::PermissionsExt;
 use std::path::Path;
 
 use crate::error::Result;
@@ -28,9 +27,13 @@ pub fn ensure_preview_sh(dir: &Path, checklist_name: &str, flow: &FlowGraph) -> 
 
 fn write_executable(path: &Path, content: &str) -> Result<()> {
     fs::write(path, content)?;
-    let mut perms = fs::metadata(path)?.permissions();
-    perms.set_mode(0o755);
-    fs::set_permissions(path, perms)?;
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        let mut perms = fs::metadata(path)?.permissions();
+        perms.set_mode(0o755);
+        fs::set_permissions(path, perms)?;
+    }
     Ok(())
 }
 
@@ -61,7 +64,10 @@ fn build_preview_sh(checklist_name: &str, flow: &FlowGraph) -> String {
     ];
 
     for state in &flow.order {
-        let label = flow.labels.get(state).map_or(state.as_str(), |s| s.as_str());
+        let label = flow
+            .labels
+            .get(state)
+            .map_or(state.as_str(), |s| s.as_str());
         // Escape single quotes in label
         let label_escaped = label.replace('\'', "'\\''");
         let state_escaped = state.replace('\'', "'\\''");
