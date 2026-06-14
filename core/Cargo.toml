@@ -57,6 +57,7 @@ explicit_iter_loop = "deny"
 option_if_let_else = "deny"
 or_fun_call = "deny"
 string_slice = "deny"
+shadow_unrelated = "deny"
 
 [dependencies]
 cel-interpreter = "0.8"

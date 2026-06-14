@@ -106,7 +106,7 @@ fn json_to_cel(v: &serde_json::Value) -> Value {
         serde_json::Value::Object(obj) => {
             let map: HashMap<Key, Value> = obj
                 .iter()
-                .map(|(k, v)| (Key::String(Arc::new(k.clone())), json_to_cel(v)))
+                .map(|(k, val)| (Key::String(Arc::new(k.clone())), json_to_cel(val)))
                 .collect();
             Value::Map(Map { map: Arc::new(map) })
         }
