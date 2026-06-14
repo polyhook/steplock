@@ -81,19 +81,19 @@ mod tests {
     use std::fs;
     use tempfile::TempDir;
 
-    const SIMPLE_MMD: &str = r#"stateDiagram-v2
+    const SIMPLE_MMD: &str = r"stateDiagram-v2
     [*] --> step_one
     step_one --> [*]
     step_one : Do the first thing
-"#;
+";
 
-    const TWO_STEP_MMD: &str = r#"stateDiagram-v2
+    const TWO_STEP_MMD: &str = r"stateDiagram-v2
     [*] --> step_one
     step_one --> step_two
     step_two --> [*]
     step_one : First step
     step_two : Second step
-"#;
+";
 
     #[test]
     fn ensure_ack_sh_creates_file() {

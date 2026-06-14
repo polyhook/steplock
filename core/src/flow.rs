@@ -141,7 +141,7 @@ fn topo_order(initial: &[String], transitions: &HashMap<String, Vec<String>>) ->
 mod tests {
     use super::*;
 
-    const SIMPLE_MMD: &str = r#"
+    const SIMPLE_MMD: &str = r"
 stateDiagram-v2
     [*] --> clean_code
     clean_code --> test_coverage
@@ -153,7 +153,7 @@ stateDiagram-v2
     test_coverage: Did you increase test coverage by at least a little?
     documentation: Did you update relevant documentation?
     no_secrets   : Did you check for hardcoded secrets or credentials?
-"#;
+";
 
     #[test]
     fn parses_simple_flow() {
@@ -173,7 +173,7 @@ stateDiagram-v2
 
     #[test]
     fn parses_branching_flow() {
-        let mmd = r#"
+        let mmd = r"
 stateDiagram-v2
     [*] --> clean_code
     clean_code --> test_coverage
@@ -183,7 +183,7 @@ stateDiagram-v2
     clean_code    : Did you write clean, readable code?
     test_coverage : Did you increase test coverage?
     skip_reason   : Describe why test coverage was skipped.
-"#;
+";
         let g = parse_mmd("test.mmd", mmd).unwrap();
         let mut nexts = g.next_states("clean_code");
         nexts.sort();
@@ -202,13 +202,13 @@ stateDiagram-v2
 
     #[test]
     fn ignores_direction_and_comments() {
-        let mmd = r#"stateDiagram-v2
+        let mmd = r"stateDiagram-v2
     direction LR
     %% this is a comment
     [*] --> step
     step --> [*]
     step : Do it
-"#;
+";
         let g = parse_mmd("test.mmd", mmd).unwrap();
         assert_eq!(g.initial, vec!["step"]);
         assert_eq!(g.labels["step"], "Do it");
