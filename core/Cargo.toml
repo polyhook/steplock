@@ -23,6 +23,7 @@ match_same_arms = "deny"
 semicolon_if_nothing_returned = "deny"
 if_not_else = "deny"
 map_unwrap_or = "deny"
+shadow_unrelated = "deny"
 
 [dependencies]
 polyhook = "0.1.5"
