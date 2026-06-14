@@ -44,9 +44,11 @@ jobs:
             ${{ runner.os }}-cargo-
 
       - name: Check formatting
+        if: matrix.os == 'ubuntu-latest'
         run: cargo fmt --manifest-path core/Cargo.toml -- --check
 
       - name: Lint (clippy)
+        if: matrix.os == 'ubuntu-latest'
         run: cargo clippy --manifest-path core/Cargo.toml --all-targets -- -D warnings
 
       - name: Run tests
