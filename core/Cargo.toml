@@ -6,9 +6,10 @@ description = "Stateful quality gate logic for steplock"
 license = "MIT"
 repository = "https://github.com/polyhook/steplock"
 homepage = "https://github.com/polyhook/steplock"
-readme = "../README.md"
+readme = "README.md"
 keywords = ["ai", "hooks", "quality-gate", "polyhook", "checklist"]
 categories = ["development-tools", "command-line-utilities"]
+exclude = ["Architecture.md", "deny.toml"]
 
 # Clippy lints are ratcheted to `deny` incrementally — every PR promotes at
 # least one more (see .steplock/checklists/pre-push).
