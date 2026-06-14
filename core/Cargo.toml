@@ -2,6 +2,7 @@
 name = "steplock-core"
 version = "0.1.0"
 edition = "2021"
+rust-version = "1.74"
 description = "Stateful quality gate logic for steplock"
 license = "MIT"
 repository = "https://github.com/polyhook/steplock"
