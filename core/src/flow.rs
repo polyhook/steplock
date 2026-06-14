@@ -153,7 +153,7 @@ fn states_that_can_reach_terminal<'a>(
     }
 
     let mut reachable: HashSet<&str> = HashSet::new();
-    let mut queue: std::collections::VecDeque<&str> = terminal.iter().map(|s| s.as_str()).collect();
+    let mut queue: VecDeque<&str> = terminal.iter().map(|s| s.as_str()).collect();
 
     while let Some(state) = queue.pop_front() {
         if reachable.contains(state) {
