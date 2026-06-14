@@ -38,7 +38,7 @@ pub struct ChecklistConfig {
 ///
 /// Returns `Err` if `content` is not valid TOML or does not match the `ChecklistConfig` schema.
 pub fn parse_config(path: &str, content: &str) -> crate::Result<ChecklistConfig> {
-    toml::from_str(content).map_err(|e| crate::error::SteplockError::Toml {
+    toml::from_str(content).map_err(|e| SteplockError::Toml {
         path: path.to_owned(),
         source: e,
     })

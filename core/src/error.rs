@@ -1,4 +1,8 @@
+use std::io;
+use std::result;
+
 use thiserror::Error;
+use toml::de;
 
 /// All errors that can be produced by `steplock-core`.
 #[derive(Debug, Error)]
@@ -6,7 +10,7 @@ use thiserror::Error;
 pub enum SteplockError {
     /// A filesystem I/O error.
     #[error("IO error: {0}")]
-    Io(#[from] std::io::Error),
+    Io(#[from] io::Error),
 
     /// A TOML parse error in the config file at `path`.
     #[error("TOML parse error in {path}: {source}")]

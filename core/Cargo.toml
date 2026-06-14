@@ -65,6 +65,8 @@ string_slice = "deny"
 shadow_unrelated = "deny"
 assertions_on_result_states = "deny"[dependencies]
 missing_panics_doc = "deny"
+absolute_paths = "deny"
+
 cel-interpreter = "0.8"
 chrono = { version = "0.4", features = ["serde"] }
 exhaustive_structs = "deny"

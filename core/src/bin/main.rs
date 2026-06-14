@@ -1,9 +1,10 @@
 use std::env;
 use std::fs;
-use std::io::Read;
+use std::io::{self, Read};
 use std::path::{Path, PathBuf};
 use std::process;
 
+use polyhook::parse;
 use steplock_core::{run, HookEvent, HookResponse};
 
 fn main() {
@@ -145,7 +146,7 @@ fn run_hook() {
     let repo_root = find_repo_root_from(&env::current_dir().unwrap())
         .unwrap_or_else(|| env::current_dir().unwrap());
 
-    let response = match run_app(std::io::stdin(), &repo_root) {
+    let response = match run_app(io::stdin(), &repo_root) {
         Ok(r) => r,
         Err(e) => {
             eprintln!("{e}");
@@ -241,7 +242,7 @@ fn run_app(mut reader: impl Read, repo_root: &Path) -> Result<polyhook::HookResp
         .read_to_end(&mut bytes)
         .map_err(|e| format!("steplock: failed to read hook input: {e}"))?;
 
-    let ph_event = polyhook::parse::parse_event(&bytes)
+    let ph_event = parse::parse_event(&bytes)
         .map_err(|e| format!("steplock: failed to read hook input: {e}"))?;
 
     let event = polyhook_to_hook_event(ph_event);
@@ -322,7 +323,7 @@ reset = "session"
     #[test]
     fn polyhook_event_maps_correctly() {
         let stdin = claude_stdin("git push origin main", "s1");
-        let ph_event = polyhook::parse::parse_event(stdin.as_bytes()).unwrap();
+        let ph_event = parse::parse_event(stdin.as_bytes()).unwrap();
         let event = polyhook_to_hook_event(ph_event);
         assert_eq!(event.event, "tool:before");
         assert_eq!(event.tool, "bash");
