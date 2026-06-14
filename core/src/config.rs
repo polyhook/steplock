@@ -19,25 +19,26 @@ pub enum Reset {
 #[derive(Debug, Clone, Deserialize)]
 #[non_exhaustive]
 pub struct ChecklistConfig {
-    /// Polyhook event type that activates this checklist, e.g. `"tool:before"`.
+    /// Hook event name to match, e.g. `"tool:before"`.
     pub on_event: String,
     /// Tool name to match (e.g. `"bash"`). Omit or set to `""` to match any tool.
     #[serde(default)]
     pub on_tool: String,
-    /// Optional CEL expression evaluated against the event. `None` matches all events.
+    /// Optional CEL expression evaluated against the hook event. `None` matches all.
     pub match_input: Option<String>,
-    /// When to reset checklist progress.
+    /// Whether session state persists across invocations or resets every time.
     #[serde(default)]
     pub reset: Reset,
-    /// If `true`, a `preview.sh` script is generated so the agent can inspect
-    /// all checklist items before the first block.
+    /// When `true`, steplock generates `preview.sh` in the session directory.
     #[serde(default)]
     pub allow_preview_request: bool,
 }
 
+/// Parse a checklist `config.toml` from `content`, using `path` in error messages.
+///
 /// # Errors
 ///
-/// Returns `Err` if `content` is not valid TOML or does not match the `ChecklistConfig` schema.
+/// Returns `SteplockError::Toml` if `content` is not valid TOML or the fields don't match.
 pub fn parse_config(path: &str, content: &str) -> crate::Result<ChecklistConfig> {
     toml::from_str(content).map_err(|e| SteplockError::Toml {
         path: path.to_owned(),

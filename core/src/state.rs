@@ -7,19 +7,21 @@ use serde::{Deserialize, Serialize};
 
 use crate::error::Result;
 
-/// Persisted checklist progress for a single session and checklist.
+/// Persisted checklist progress for one session scope.
+///
+/// Stored as `state.json` under `.steplock/sessions/<scope-key>/<checklist>/`.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
 pub struct SessionState {
-    /// Name of the checklist this state belongs to.
+    /// Name of the checklist (matches the directory name under `.steplock/checklists/`).
     pub checklist: String,
-    /// The current Mermaid state node the agent must acknowledge.
+    /// The active state name, or `"[*]"` when the checklist is complete.
     pub current_state: String,
-    /// The single next state when the flow is linear; `None` when branching.
+    /// Pre-computed next state when there is exactly one outgoing transition; `None` otherwise.
     pub next_state: Option<String>,
-    /// All outgoing transitions from `current_state` (including `[*]`).
+    /// All valid next state names from `current_state` (including `"[*]"`).
     pub transitions: Vec<String>,
-    /// States that have already been acknowledged in this session.
+    /// States that have been acknowledged in this session so far.
     pub visited: Vec<String>,
 }
 
@@ -31,19 +33,21 @@ impl SessionState {
     }
 }
 
+/// Load session state from `path`.
+///
 /// # Errors
 ///
-/// Returns `Err` if the file cannot be read or if its contents are not valid JSON.
+/// Returns an error if the file cannot be read or does not contain valid JSON.
 pub fn load_state(path: &Path) -> Result<SessionState> {
     let content = fs::read_to_string(path)?;
     Ok(serde_json::from_str(&content)?)
 }
 
-/// Atomically write state via temp + mv (POSIX mv is atomic same-filesystem).
+/// Atomically write `state` to `path` via a PID-suffixed temp file and POSIX `mv`.
 ///
 /// # Errors
 ///
-/// Returns `Err` if serialization, writing the temp file, or the rename fails.
+/// Returns an error if serialization fails or the write or rename fails.
 pub fn save_state(path: &Path, state: &SessionState) -> Result<()> {
     let dir = path.parent().unwrap_or_else(|| Path::new("."));
     let tmp = dir.join(format!("state.json.tmp.{}", std::process::id()));
@@ -107,12 +111,12 @@ impl HookEvent {
 #[derive(Debug)]
 #[non_exhaustive]
 pub enum HookResponse {
-    /// The tool call is blocked; `message` is displayed to the agent.
+    /// Block the agent's tool call and show `message` to the agent.
     Block {
-        /// Human-readable gate message shown to the agent.
+        /// The checklist prompt shown to the agent.
         message: String,
     },
-    /// The tool call is allowed to proceed.
+    /// Allow the tool call to proceed.
     Approve,
 }
 
