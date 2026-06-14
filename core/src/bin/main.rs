@@ -68,7 +68,22 @@ fn run_hook() {
     }
 }
 
+const SAMPLE_CONFIG: &str = r#"on_event = "tool:before"
+on_tool = "bash"
+match_input = "input.command.contains('git push')"
+reset = "session"
+"#;
+
+const SAMPLE_FLOW: &str = r#"stateDiagram-v2
+    [*] --> tests_pass
+    tests_pass --> reviewed
+    reviewed --> [*]
+    tests_pass : Tests pass locally
+    reviewed : Code reviewed
+"#;
+
 /// Create `.steplock/checklists/` and a `.steplock/.gitignore` in `dir`.
+/// Also writes a ready-to-use sample checklist so `git push` is blocked immediately.
 fn run_init(dir: &Path) -> std::io::Result<()> {
     let checklists_dir = dir.join(".steplock").join("checklists");
     if checklists_dir.exists() {
@@ -80,9 +95,14 @@ fn run_init(dir: &Path) -> std::io::Result<()> {
         dir.join(".steplock").join(".gitignore"),
         "sessions/\naudit.log\n",
     )?;
+    let sample_dir = checklists_dir.join("example-gate");
+    fs::create_dir_all(&sample_dir)?;
+    fs::write(sample_dir.join("config.toml"), SAMPLE_CONFIG)?;
+    fs::write(sample_dir.join("flow.mmd"), SAMPLE_FLOW)?;
     println!("steplock: initialized .steplock/checklists/");
-    println!("Next: create a checklist in .steplock/checklists/<name>/");
-    println!("      with config.toml and flow.mmd.");
+    println!("A sample checklist was written to .steplock/checklists/example-gate/.");
+    println!("It will block `git push` until two quality checks are acknowledged.");
+    println!("Edit config.toml and flow.mmd to customize it, or add more checklists.");
     Ok(())
 }
 
@@ -274,6 +294,28 @@ reset = "session"
         let gitignore = fs::read_to_string(tmp.path().join(".steplock/.gitignore")).unwrap();
         assert!(gitignore.contains("sessions/"));
         assert!(gitignore.contains("audit.log"));
+    }
+
+    #[test]
+    fn init_scaffolds_sample_checklist() {
+        let tmp = TempDir::new().unwrap();
+        run_init(tmp.path()).unwrap();
+        let sample = tmp.path().join(".steplock/checklists/example-gate");
+        assert!(sample.join("config.toml").exists());
+        assert!(sample.join("flow.mmd").exists());
+        let cfg = fs::read_to_string(sample.join("config.toml")).unwrap();
+        assert!(cfg.contains("git push"));
+        let flow = fs::read_to_string(sample.join("flow.mmd")).unwrap();
+        assert!(flow.contains("stateDiagram-v2"));
+    }
+
+    #[test]
+    fn init_sample_checklist_is_valid() {
+        let tmp = TempDir::new().unwrap();
+        run_init(tmp.path()).unwrap();
+        let stdin = claude_stdin("git push origin main", "s1");
+        let resp = run_app(stdin.as_bytes(), tmp.path()).unwrap();
+        assert!(matches!(resp, polyhook::HookResponse::BlockResponse(_)));
     }
 
     #[test]
