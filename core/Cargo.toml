@@ -23,6 +23,9 @@ match_same_arms = "deny"
 semicolon_if_nothing_returned = "deny"
 if_not_else = "deny"
 map_unwrap_or = "deny"
+needless_continue = "deny"
+redundant_closure_for_method_calls = "deny"
+needless_raw_string_hashes = "deny"
 
 [dependencies]
 polyhook = "0.1.5"
