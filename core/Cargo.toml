@@ -19,6 +19,7 @@ unimplemented = "deny"
 manual_string_new = "deny"
 uninlined_format_args = "deny"
 cloned_instead_of_copied = "deny"
+<<<<<<< HEAD
 match_same_arms = "deny"
 semicolon_if_nothing_returned = "deny"
 if_not_else = "deny"
@@ -28,6 +29,8 @@ needless_continue = "deny"
 format_push_string = "deny"
 missing_errors_doc = "deny"
 must_use_candidate = "deny"
+=======
+>>>>>>> origin/chore/non-exhaustive-public-enums
 
 [dependencies]
 polyhook = "0.1.5"
