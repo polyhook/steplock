@@ -97,3 +97,8 @@ codegen-units = 1
 [dev-dependencies]
 proptest = "1"
 tempfile = "3"
+
+[profile.release]
+lto = "thin"
+codegen-units = 1
+strip = true
