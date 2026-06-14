@@ -2,8 +2,7 @@
 name = "steplock-core"
 version = "0.1.0"
 edition = "2021"
-rust-version = "1.75"description = "Stateful quality gate logic for steplock"
-license = "MIT"
+rust-version = "1.75"description = "Stateful quality gate logic for steplock"license = "MIT"
 repository = "https://github.com/polyhook/steplock"
 homepage = "https://github.com/polyhook/steplock"
 readme = "README.md"
@@ -20,6 +19,10 @@ all-features = true
 [lints.rust]
 missing_debug_implementations = "deny"
 missing_copy_implementations = "deny"
+
+[package.metadata.docs.rs]
+all-features = true
+rustdoc-args = ["--cfg", "docsrs"]
 
 # Clippy lints are ratcheted to `deny` incrementally — every PR promotes at
 # least one more (see .steplock/checklists/pre-push).
@@ -71,7 +74,6 @@ assertions_on_result_states = "deny"
 needless_raw_string_hashes = "deny"
 exhaustive_structs = "deny"
 exhaustive_enums = "deny"
-
 cel-interpreter = "0.8"
 chrono = { version = "0.4", features = ["serde"] }
 exhaustive_structs = "deny"
