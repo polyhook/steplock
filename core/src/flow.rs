@@ -379,6 +379,7 @@ stateDiagram-v2
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod proptest_tests {
     use proptest::prelude::*;
 

@@ -1,5 +1,5 @@
 //! Integration tests for the steplock gate runner.
-#![allow(clippy::panic)]
+#![allow(clippy::panic, clippy::unwrap_used, clippy::expect_used)]
 use std::collections::HashMap;
 use std::fmt::Write as _;
 use std::fs;

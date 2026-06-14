@@ -1,4 +1,5 @@
 //! Minimal example: evaluate a single hook event against a `.steplock/` tree.
+#![allow(clippy::expect_used, clippy::unwrap_used)]
 //!
 //! Run with:
 //! ```bash

@@ -1,4 +1,5 @@
 //! CLI integration tests for the `steplock` binary.
+#![allow(clippy::unwrap_used, clippy::expect_used)]
 use std::fmt::Write as FmtWrite;
 use std::fs;
 use std::io::Write;

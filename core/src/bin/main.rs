@@ -27,7 +27,7 @@ fn main() {
             }
         }
         [cmd] if cmd == "validate" => {
-            let dir = env::current_dir().unwrap();
+            let dir = env::current_dir().unwrap_or_else(|_| PathBuf::from("."));
             let root = find_repo_root_from(&dir).unwrap_or(dir);
             match run_validate(&root) {
                 Ok(true) => {}
@@ -39,7 +39,7 @@ fn main() {
             }
         }
         [cmd] if cmd == "clean" => {
-            if let Err(e) = run_clean(&env::current_dir().unwrap()) {
+            if let Err(e) = run_clean(&env::current_dir().unwrap_or_else(|_| PathBuf::from("."))) {
                 eprintln!("steplock: clean failed: {e}");
                 process::exit(1);
             }

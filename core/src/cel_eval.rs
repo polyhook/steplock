@@ -1,5 +1,6 @@
 //! CEL (Common Expression Language) evaluation for `match_input` config fields.
 use std::collections::HashMap;
+use std::panic;
 use std::sync::Arc;
 
 use cel_interpreter::objects::{Key, Map, Value};
@@ -13,12 +14,8 @@ use crate::state::HookEvent;
 ///
 /// # Errors
 ///
-/// Returns `Err` if `expr` fails to compile or fails to execute as a CEL expression.
-///
-/// # Panics
-///
-/// Panics if the CEL context rejects a built-in variable name, which cannot happen with the
-/// fixed variable names used here.
+/// Returns `Err` if `expr` fails to compile or fails to execute as a CEL expression,
+/// including if the underlying parser panics on a malformed expression.
 pub fn matches_event(event: &HookEvent, expr: &Option<String>) -> Result<bool> {
     let expr = match expr {
         None => return Ok(true),
@@ -26,10 +23,22 @@ pub fn matches_event(event: &HookEvent, expr: &Option<String>) -> Result<bool> {
         Some(e) => e,
     };
 
-    let program = Program::compile(expr).map_err(|e| SteplockError::Cel {
-        expr: expr.clone(),
-        message: e.to_string(),
-    })?;
+    let compile_result = panic::catch_unwind(|| Program::compile(expr));
+    let program = match compile_result {
+        Ok(Ok(p)) => p,
+        Ok(Err(e)) => {
+            return Err(SteplockError::Cel {
+                expr: expr.clone(),
+                message: e.to_string(),
+            })
+        }
+        Err(_) => {
+            return Err(SteplockError::Cel {
+                expr: expr.clone(),
+                message: "CEL expression caused an internal parse error".to_owned(),
+            })
+        }
+    };
 
     let mut ctx = Context::default();
 
@@ -396,6 +405,7 @@ mod tests {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used)]
 mod proptest_tests {
     use std::collections::HashMap;
 

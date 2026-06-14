@@ -1,0 +1,7 @@
+# Seeds for failure cases proptest has generated in the past. It is
+# automatically read and these particular cases re-run before any
+# novel cases are generated.
+#
+# It is recommended to check this file in to source control so that
+# everyone who runs the test benefits from these saved cases.
+cc 153bcc4cde5cb6f32f12b40acd2515be24dfcec76ff1c855a7f41435960d578c # shrinks to event = HookEvent { event: "", tool: "", input: {}, output: {}, session_id: "", caller: "" }, expr = Some("!")
