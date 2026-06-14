@@ -1,5 +1,4 @@
 use std::fs;
-use std::os::unix::fs::PermissionsExt;
 use std::path::Path;
 
 use crate::error::Result;
@@ -28,9 +27,13 @@ pub fn ensure_preview_sh(dir: &Path, checklist_name: &str, flow: &FlowGraph) -> 
 
 fn write_executable(path: &Path, content: &str) -> Result<()> {
     fs::write(path, content)?;
-    let mut perms = fs::metadata(path)?.permissions();
-    perms.set_mode(0o755);
-    fs::set_permissions(path, perms)?;
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        let mut perms = fs::metadata(path)?.permissions();
+        perms.set_mode(0o755);
+        fs::set_permissions(path, perms)?;
+    }
     Ok(())
 }
 
