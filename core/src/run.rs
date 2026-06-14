@@ -702,6 +702,93 @@ reset = "always"
         assert!(!scope_dir.exists());
     }
 
+    // Simulates what ack.sh does: advance current_state to next and add cur to visited.
+    fn simulate_ack(state_path: &Path, next: &str) {
+        let mut s = load_state(state_path).unwrap();
+        s.visited.push(s.current_state.clone());
+        s.current_state = next.to_owned();
+        s.next_state = None;
+        save_state(state_path, &s).unwrap();
+    }
+
+    #[test]
+    fn two_step_lifecycle_block_ack_block_ack_approve() {
+        let tmp = TempDir::new().unwrap();
+        let cl_dir = tmp.path().join(".steplock/checklists/ddd-gate");
+        fs::create_dir_all(&cl_dir).unwrap();
+        fs::write(
+            cl_dir.join("config.toml"),
+            r#"on_event = "tool:before"
+on_tool = "bash"
+match_input = "input.command.contains('git push')"
+reset = "session"
+"#,
+        )
+        .unwrap();
+        fs::write(
+            cl_dir.join("flow.mmd"),
+            r#"stateDiagram-v2
+    [*] --> step_one
+    step_one --> step_two
+    step_two --> [*]
+    step_one : Did you do step one?
+    step_two : Did you do step two?
+"#,
+        )
+        .unwrap();
+
+        let event = make_event("tool:before", "bash", "git push origin main", "sess-lc");
+        let state_path = tmp
+            .path()
+            .join(".steplock/sessions/sess-lc/ddd-gate/state.json");
+
+        // Run 1 — no state yet; blocks on step_one, creates state with transitions
+        let resp = run(&event, tmp.path()).unwrap();
+        assert!(matches!(resp, HookResponse::Block { .. }));
+        let s = load_state(&state_path).unwrap();
+        assert_eq!(s.current_state, "step_one");
+        assert_eq!(s.transitions, vec!["step_two"]);
+
+        // Simulate ack of step_one → step_two
+        simulate_ack(&state_path, "step_two");
+
+        // Run 2 — blocks on step_two, transitions updated to ["[*]"]
+        let resp = run(&event, tmp.path()).unwrap();
+        assert!(matches!(resp, HookResponse::Block { .. }));
+        let s = load_state(&state_path).unwrap();
+        assert_eq!(s.current_state, "step_two");
+        assert_eq!(s.transitions, vec!["[*]"]);
+        assert!(s.visited.contains(&"step_one".to_owned()));
+
+        // Simulate ack of step_two → [*]
+        simulate_ack(&state_path, "[*]");
+
+        // Run 3 — checklist complete, approves and resets state
+        let resp = run(&event, tmp.path()).unwrap();
+        assert!(matches!(resp, HookResponse::Approve));
+        let s = load_state(&state_path).unwrap();
+        assert_eq!(s.current_state, "step_one"); // reset to initial
+        assert!(s.visited.is_empty());
+    }
+
+    #[test]
+    fn state_persists_transitions_on_repeated_blocks() {
+        let tmp = TempDir::new().unwrap();
+        setup_checklist(tmp.path());
+        let event = make_event("tool:before", "bash", "git push origin main", "sess-rep");
+        let state_path = tmp
+            .path()
+            .join(".steplock/sessions/sess-rep/quality-gate/state.json");
+
+        // Each call re-computes and writes the same transitions
+        run(&event, tmp.path()).unwrap();
+        let s1 = load_state(&state_path).unwrap();
+        run(&event, tmp.path()).unwrap();
+        let s2 = load_state(&state_path).unwrap();
+        assert_eq!(s1.transitions, s2.transitions);
+        assert_eq!(s1.current_state, s2.current_state);
+    }
+
     #[test]
     fn unknown_current_state_in_flow_skips_checklist() {
         let tmp = TempDir::new().unwrap();
