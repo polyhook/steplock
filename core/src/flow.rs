@@ -105,14 +105,12 @@ pub fn parse_mmd(path: &str, content: &str) -> Result<FlowGraph> {
 }
 
 fn split_transition(line: &str) -> Option<(&str, &str)> {
-    let pos = line.find("-->")?;
-    Some((&line[..pos], &line[pos + 3..]))
+    line.split_once("-->")
 }
 
 fn split_label(line: &str) -> Option<(&str, &str)> {
     // Called only when split_transition returned None (no "-->").
-    let pos = line.find(':')?;
-    Some((&line[..pos], &line[pos + 1..]))
+    line.split_once(':')
 }
 
 fn topo_order(initial: &[String], transitions: &HashMap<String, Vec<String>>) -> Vec<String> {
