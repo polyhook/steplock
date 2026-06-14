@@ -240,6 +240,29 @@ jobs:
       - name: Check compilation on MSRV
         run: cargo check --manifest-path core/Cargo.toml --all-targets
 
+  msrv:
+    name: MSRV (1.75)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust 1.75
+        uses: dtolnay/rust-toolchain@1.75
+
+      - name: Cache cargo registry
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            core/target
+          key: ${{ runner.os }}-cargo-msrv-${{ hashFiles('core/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-msrv-
+
+      - name: Check MSRV compiles
+        run: cargo check --manifest-path core/Cargo.toml --all-targets
+
   build:
     name: Build release binary
     runs-on: ${{ matrix.os }}
