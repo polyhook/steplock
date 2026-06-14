@@ -269,7 +269,14 @@ jobs:
         run: cargo build --manifest-path core/Cargo.toml --release
 
       - name: Smoke-test binary runs
-        run: core/target/release/steplock --version
+        run: |
+          BIN="$(pwd)/core/target/release/steplock"
+          test -f "$BIN"
+          "$BIN" --version
+          tmp=$(mktemp -d)
+          cd "$tmp" && "$BIN" init
+          echo '{"hook_event_name":"PreToolUse","tool_name":"Bash","tool_input":{"command":"ls"},"session_id":"smoke"}' \
+            | "$BIN"
 
   coverage:
     name: Code coverage (cargo-llvm-cov)
