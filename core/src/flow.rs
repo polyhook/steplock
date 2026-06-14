@@ -53,8 +53,7 @@ pub fn parse_mmd(path: &str, content: &str) -> Result<FlowGraph> {
             continue;
         }
 
-        if let Some(rest) = line.strip_prefix("direction ") {
-            let _ = rest; // ignore direction hints
+        if line.strip_prefix("direction ").is_some() {
             continue;
         }
 

@@ -612,7 +612,7 @@ reset = "always"
 
         // First block creates the session dir
         let event = make_event("tool:before", "bash", "git push origin main", "sess-stop");
-        let _ = run(&event, tmp.path()).unwrap();
+        run(&event, tmp.path()).unwrap();
         let scope_dir = tmp.path().join(".steplock/sessions/sess-stop");
         assert!(scope_dir.exists());
 
@@ -680,7 +680,7 @@ reset = "always"
             session_id: String::new(),
             caller: "unknown".to_owned(),
         };
-        let _ = run(&no_session, tmp.path()).unwrap();
+        run(&no_session, tmp.path()).unwrap();
 
         let fallback_id =
             fs::read_to_string(tmp.path().join(".steplock/sessions/fallback-id")).unwrap();
