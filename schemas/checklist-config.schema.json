@@ -4,7 +4,7 @@
   "title": "steplock checklist config",
   "description": "Configuration for a steplock checklist gate (config.toml).",
   "type": "object",
-  "required": ["on_event", "on_tool"],
+  "required": ["on_event"],
   "additionalProperties": false,
   "properties": {
     "on_event": {
@@ -21,7 +21,8 @@
     },
     "on_tool": {
       "type": "string",
-      "description": "Normalized polyhook tool name to match (e.g. 'bash', 'write_file').",
+      "description": "Normalized polyhook tool name to match (e.g. 'bash', 'write_file'). Omit or set to '' to match any tool.",
+      "default": "",
       "examples": ["bash", "write_file", "read_file", "list_directory"]
     },
     "match_input": {

@@ -12,7 +12,7 @@ Both schemas are read by editor tooling (Taplo, etc.) via the `#:schema` hint â€
 | Field                  | Type    | Required | Default     | Description |
 | ---------------------- | ------- | -------- | ----------- | ----------- |
 | `on_event`             | string  | yes      | â€”           | polyhook event type that triggers this checklist |
-| `on_tool`              | string  | yes      | â€”           | Normalized polyhook tool name to match |
+| `on_tool`              | string  | no       | `""`        | Normalized polyhook tool name to match (empty = any tool) |
 | `match_input`          | string  | no       | (match all) | CEL expression evaluated against the event |
 | `reset`                | string  | no       | `"session"` | When to reset checklist progress |
 | `allow_preview_request`| boolean | no       | `false`     | Let the agent preview all items before starting |
@@ -26,7 +26,6 @@ Both schemas are read by editor tooling (Taplo, etc.) via the `#:schema` hint â€
 | Value     | Scope key             | State dir                         | Reset when           |
 | --------- | --------------------- | --------------------------------- | -------------------- |
 | `session` | `HookEvent.sessionId` | `.steplock/sessions/<session-id>/`| `session:stop` fires |
-| `branch`  | git branch name       | `.steplock/sessions/<branch>/`    | branch changes       |
 | `always`  | â€”                     | no dir, no file                   | every invocation     |
 
 ---
