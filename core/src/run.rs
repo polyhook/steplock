@@ -303,11 +303,11 @@ reset = "session"
 
         fs::write(
             cl_dir.join("flow.mmd"),
-            r#"stateDiagram-v2
+            r"stateDiagram-v2
     [*] --> clean_code
     clean_code --> [*]
     clean_code: Did you write clean code?
-"#,
+",
         )
         .unwrap();
     }
@@ -416,11 +416,11 @@ reset = "always"
         .unwrap();
         fs::write(
             cl_dir.join("flow.mmd"),
-            r#"stateDiagram-v2
+            r"stateDiagram-v2
     [*] --> check
     check --> [*]
     check: Did you check?
-"#,
+",
         )
         .unwrap();
 
@@ -504,11 +504,11 @@ allow_preview_request = true
         .unwrap();
         fs::write(
             cl_dir.join("flow.mmd"),
-            r#"stateDiagram-v2
+            r"stateDiagram-v2
     [*] --> check
     check --> [*]
     check: Did you check?
-"#,
+",
         )
         .unwrap();
 
@@ -542,7 +542,7 @@ reset = "session"
         .unwrap();
         fs::write(
             cl_dir.join("flow.mmd"),
-            r#"stateDiagram-v2
+            r"stateDiagram-v2
     [*] --> check
     check --> pass
     check --> skip
@@ -551,7 +551,7 @@ reset = "session"
     check: Did you check?
     pass: Yes, it passed
     skip: No, skipped because
-"#,
+",
         )
         .unwrap();
 
@@ -582,7 +582,7 @@ reset = "always"
         .unwrap();
         fs::write(
             cl_dir.join("flow.mmd"),
-            r#"stateDiagram-v2
+            r"stateDiagram-v2
     [*] --> check
     check --> pass
     check --> skip
@@ -591,7 +591,7 @@ reset = "always"
     check: Did you check?
     pass: Yes
     skip: No
-"#,
+",
         )
         .unwrap();
 
