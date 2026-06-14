@@ -12,19 +12,55 @@ fn main() {
         [flag] if flag == "--version" || flag == "-V" => {
             println!("steplock {}", env!("CARGO_PKG_VERSION"));
         }
+        [flag] if flag == "--help" || flag == "-h" => {
+            print_help();
+        }
         [cmd] if cmd == "init" => {
             if let Err(e) = run_init(&env::current_dir().unwrap()) {
                 eprintln!("steplock: init failed: {e}");
                 process::exit(1);
             }
         }
+        [cmd] if cmd == "validate" => {
+            let dir = env::current_dir().unwrap();
+            let root = find_repo_root_from(&dir).unwrap_or(dir);
+            match run_validate(&root) {
+                Ok(true) => {}
+                Ok(false) => process::exit(1),
+                Err(e) => {
+                    eprintln!("steplock: validate failed: {e}");
+                    process::exit(1);
+                }
+            }
+        }
         [] => run_hook(),
         _ => {
             eprintln!("steplock: unknown arguments");
-            eprintln!("Usage: steplock [--version | init]");
+            eprintln!("Run 'steplock --help' for usage.");
             process::exit(1);
         }
     }
+}
+
+fn print_help() {
+    println!(
+        "steplock {}
+
+Stateful quality gate for AI coding agents.
+
+USAGE:
+    steplock               Read hook event from stdin and respond (used by polyhook)
+    steplock init          Create .steplock/checklists/ in the current directory
+    steplock validate      Check all checklist configs for errors
+    steplock --version     Print version
+
+CHECKLIST FILES:
+    .steplock/checklists/<name>/config.toml   Gate trigger and reset configuration
+    .steplock/checklists/<name>/flow.mmd      Mermaid stateDiagram-v2 checklist flow
+
+For more information: https://github.com/polyhook/steplock",
+        env!("CARGO_PKG_VERSION")
+    );
 }
 
 fn run_hook() {
@@ -43,6 +79,69 @@ fn run_hook() {
         eprintln!("steplock: failed to write response: {e}");
         process::exit(2);
     }
+}
+
+/// Parse all checklists under `repo_root/.steplock/checklists/`, reporting errors.
+/// Returns `Ok(true)` if all are valid, `Ok(false)` if any have errors.
+fn run_validate(repo_root: &Path) -> std::io::Result<bool> {
+    use steplock_core::{config::parse_config, flow::parse_mmd};
+
+    let checklists_dir = repo_root.join(".steplock").join("checklists");
+    if !checklists_dir.exists() {
+        eprintln!("steplock: no .steplock/checklists/ directory found");
+        return Ok(false);
+    }
+
+    let mut entries: Vec<PathBuf> = fs::read_dir(&checklists_dir)?
+        .filter_map(|e| e.ok().map(|e| e.path()))
+        .filter(|p| p.is_dir())
+        .collect();
+    entries.sort();
+
+    if entries.is_empty() {
+        println!("steplock: no checklists found in .steplock/checklists/");
+        return Ok(true);
+    }
+
+    let mut all_ok = true;
+    for checklist_dir in &entries {
+        let name = checklist_dir
+            .file_name()
+            .and_then(|n| n.to_str())
+            .unwrap_or("?");
+
+        let config_path = checklist_dir.join("config.toml");
+        let flow_path = checklist_dir.join("flow.mmd");
+
+        if !config_path.exists() {
+            eprintln!("steplock: [{name}] missing config.toml");
+            all_ok = false;
+            continue;
+        }
+        if !flow_path.exists() {
+            eprintln!("steplock: [{name}] missing flow.mmd");
+            all_ok = false;
+            continue;
+        }
+
+        let config_str = fs::read_to_string(&config_path)?;
+        if let Err(e) = parse_config(config_path.to_str().unwrap_or("config.toml"), &config_str) {
+            eprintln!("steplock: [{name}] config.toml error: {e}");
+            all_ok = false;
+            continue;
+        }
+
+        let flow_str = fs::read_to_string(&flow_path)?;
+        if let Err(e) = parse_mmd(flow_path.to_str().unwrap_or("flow.mmd"), &flow_str) {
+            eprintln!("steplock: [{name}] flow.mmd error: {e}");
+            all_ok = false;
+            continue;
+        }
+
+        println!("steplock: [{name}] ok");
+    }
+
+    Ok(all_ok)
 }
 
 /// Create `.steplock/checklists/` and a `.steplock/.gitignore` in `dir`.
@@ -259,5 +358,69 @@ reset = "session"
         fs::create_dir_all(tmp.path().join(".steplock/checklists")).unwrap();
         // Second call should not error
         run_init(tmp.path()).unwrap();
+    }
+
+    #[test]
+    fn validate_returns_false_when_no_checklists_dir() {
+        let tmp = TempDir::new().unwrap();
+        let ok = run_validate(tmp.path()).unwrap();
+        assert!(!ok);
+    }
+
+    #[test]
+    fn validate_ok_for_valid_checklist() {
+        let tmp = TempDir::new().unwrap();
+        setup_checklist(tmp.path());
+        let ok = run_validate(tmp.path()).unwrap();
+        assert!(ok);
+    }
+
+    #[test]
+    fn validate_fails_for_missing_flow_mmd() {
+        let tmp = TempDir::new().unwrap();
+        let cl_dir = tmp.path().join(".steplock/checklists/bad-gate");
+        fs::create_dir_all(&cl_dir).unwrap();
+        fs::write(
+            cl_dir.join("config.toml"),
+            "on_event = \"tool:before\"\n",
+        )
+        .unwrap();
+        // no flow.mmd
+        let ok = run_validate(tmp.path()).unwrap();
+        assert!(!ok);
+    }
+
+    #[test]
+    fn validate_fails_for_invalid_config_toml() {
+        let tmp = TempDir::new().unwrap();
+        let cl_dir = tmp.path().join(".steplock/checklists/bad-gate");
+        fs::create_dir_all(&cl_dir).unwrap();
+        fs::write(cl_dir.join("config.toml"), "not valid toml !!!").unwrap();
+        fs::write(
+            cl_dir.join("flow.mmd"),
+            "stateDiagram-v2\n    [*] --> s\n    s --> [*]\n",
+        )
+        .unwrap();
+        let ok = run_validate(tmp.path()).unwrap();
+        assert!(!ok);
+    }
+
+    #[test]
+    fn validate_fails_for_invalid_flow_mmd() {
+        let tmp = TempDir::new().unwrap();
+        let cl_dir = tmp.path().join(".steplock/checklists/bad-gate");
+        fs::create_dir_all(&cl_dir).unwrap();
+        fs::write(
+            cl_dir.join("config.toml"),
+            "on_event = \"tool:before\"\n",
+        )
+        .unwrap();
+        fs::write(
+            cl_dir.join("flow.mmd"),
+            "stateDiagram-v2\n    a --> b\n", // no initial state
+        )
+        .unwrap();
+        let ok = run_validate(tmp.path()).unwrap();
+        assert!(!ok);
     }
 }
