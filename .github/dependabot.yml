@@ -8,6 +8,7 @@ updates:
       - dependencies
     commit-message:
       prefix: chore
+    open-pull-requests-limit: 5
 
   - package-ecosystem: github-actions
     directory: /
@@ -17,3 +18,4 @@ updates:
       - dependencies
     commit-message:
       prefix: chore
+    open-pull-requests-limit: 5
