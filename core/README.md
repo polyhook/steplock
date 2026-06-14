@@ -1,4 +1,4 @@
-# steplock-core
+# steplock
 
 Rust library implementing the steplock gate logic. Used by the `steplock` CLI binary and embeddable in custom hook binaries.
 
@@ -18,7 +18,7 @@ Rust library implementing the steplock gate logic. Used by the `steplock` CLI bi
 ## Entry point
 
 ```rust
-use steplock_core::{run, HookEvent, HookResponse};
+use steplock::{run, HookEvent, HookResponse};
 
 let event = HookEvent { /* ... */ };
 match run(&event, repo_root)? {
@@ -31,7 +31,7 @@ match run(&event, repo_root)? {
 
 ## `HookEvent`
 
-All fields come from the polyhook layer — steplock-core does not read from stdin itself.
+All fields come from the polyhook layer — steplock does not read from stdin itself.
 
 | Field        | Type                          | Description |
 | ------------ | ----------------------------- | ----------- |
@@ -44,7 +44,7 @@ All fields come from the polyhook layer — steplock-core does not read from std
 
 ## State management
 
-`SessionState` is read and written by steplock-core on each invocation. `ack.sh` also writes it (via `jq` + atomic `mv`). Both paths are safe for concurrent access — `save_state` uses a PID-suffixed temp file and POSIX `mv` (atomic same-filesystem).
+`SessionState` is read and written by steplock on each invocation. `ack.sh` also writes it (via `jq` + atomic `mv`). Both paths are safe for concurrent access — `save_state` uses a PID-suffixed temp file and POSIX `mv` (atomic same-filesystem).
 
 ## CEL evaluation
 

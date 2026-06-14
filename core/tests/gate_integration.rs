@@ -5,8 +5,8 @@ use std::fmt::Write as _;
 use std::fs;
 use std::path::Path;
 
-use steplock_core::state::{load_state, save_state};
-use steplock_core::{HookEvent, HookResponse};
+use steplock::state::{load_state, save_state};
+use steplock::{HookEvent, HookResponse};
 
 fn push_event(session: &str) -> HookEvent {
     let mut input = HashMap::new();
@@ -74,7 +74,7 @@ fn two_step_checklist_blocks_in_order_then_approves() {
     let event = push_event("s1");
 
     // First call: blocked at step_a
-    match steplock_core::run(&event, tmp.path()).unwrap() {
+    match steplock::run(&event, tmp.path()).unwrap() {
         HookResponse::Block { message } => assert!(message.contains("Step A")),
         HookResponse::Approve => panic!("expected block at step_a"),
         _ => panic!("unexpected variant"),
@@ -84,7 +84,7 @@ fn two_step_checklist_blocks_in_order_then_approves() {
     ack(tmp.path(), "quality", "s1", "step_b");
 
     // Second call: blocked at step_b
-    match steplock_core::run(&event, tmp.path()).unwrap() {
+    match steplock::run(&event, tmp.path()).unwrap() {
         HookResponse::Block { message } => assert!(message.contains("Step B")),
         HookResponse::Approve => panic!("expected block at step_b"),
         _ => panic!("unexpected variant"),
@@ -94,11 +94,11 @@ fn two_step_checklist_blocks_in_order_then_approves() {
     ack(tmp.path(), "quality", "s1", "[*]");
 
     // Third call: approved (checklist complete) + state reset
-    let resp = steplock_core::run(&event, tmp.path()).unwrap();
+    let resp = steplock::run(&event, tmp.path()).unwrap();
     assert!(matches!(resp, HookResponse::Approve));
 
     // Next call starts fresh at step_a
-    match steplock_core::run(&event, tmp.path()).unwrap() {
+    match steplock::run(&event, tmp.path()).unwrap() {
         HookResponse::Block { message } => assert!(message.contains("Step A")),
         HookResponse::Approve => panic!("expected fresh block after reset"),
         _ => panic!("unexpected variant"),
@@ -121,11 +121,11 @@ fn two_sessions_are_isolated() {
 
     // Both sessions block initially at step_a
     assert!(matches!(
-        steplock_core::run(&ev_a, tmp.path()).unwrap(),
+        steplock::run(&ev_a, tmp.path()).unwrap(),
         HookResponse::Block { .. }
     ));
     assert!(matches!(
-        steplock_core::run(&ev_b, tmp.path()).unwrap(),
+        steplock::run(&ev_b, tmp.path()).unwrap(),
         HookResponse::Block { .. }
     ));
 
@@ -133,12 +133,12 @@ fn two_sessions_are_isolated() {
     ack(tmp.path(), "quality", "sess-a", "step_b");
 
     // sess-a is at step_b, sess-b still at step_a
-    match steplock_core::run(&ev_a, tmp.path()).unwrap() {
+    match steplock::run(&ev_a, tmp.path()).unwrap() {
         HookResponse::Block { message } => assert!(message.contains("Step B")),
         HookResponse::Approve => panic!("sess-a should be at step_b"),
         _ => panic!("unexpected variant"),
     }
-    match steplock_core::run(&ev_b, tmp.path()).unwrap() {
+    match steplock::run(&ev_b, tmp.path()).unwrap() {
         HookResponse::Block { message } => assert!(message.contains("Step A")),
         HookResponse::Approve => panic!("sess-b should still be at step_a"),
         _ => panic!("unexpected variant"),
@@ -155,7 +155,7 @@ fn first_matching_checklist_alphabetically_blocks() {
     write_checklist(tmp.path(), "z-gate", &[("check_z", "Check Z")]);
     let event = push_event("s-multi");
 
-    match steplock_core::run(&event, tmp.path()).unwrap() {
+    match steplock::run(&event, tmp.path()).unwrap() {
         HookResponse::Block { message } => assert!(message.contains("Check A")),
         HookResponse::Approve => panic!("expected block from a-gate"),
         _ => panic!("unexpected variant"),
@@ -195,7 +195,7 @@ fn cel_match_input_gates_only_matching_commands() {
     );
     // ls command: no "push" word → approve
     assert!(matches!(
-        steplock_core::run(&ls_event, tmp.path()).unwrap(),
+        steplock::run(&ls_event, tmp.path()).unwrap(),
         HookResponse::Approve
     ));
 
@@ -215,13 +215,13 @@ fn cel_match_input_gates_only_matching_commands() {
     );
     // "push" in path but not a standalone word → approve
     assert!(matches!(
-        steplock_core::run(&path_event, tmp.path()).unwrap(),
+        steplock::run(&path_event, tmp.path()).unwrap(),
         HookResponse::Approve
     ));
 
     // Real push command → block
     assert!(matches!(
-        steplock_core::run(&push_event("s-cel"), tmp.path()).unwrap(),
+        steplock::run(&push_event("s-cel"), tmp.path()).unwrap(),
         HookResponse::Block { .. }
     ));
 }
@@ -233,7 +233,7 @@ fn state_json_readable_as_session_state() {
     let tmp = tempfile::TempDir::new().unwrap();
     write_checklist(tmp.path(), "gate", &[("step_a", "Step A")]);
     let event = push_event("s-persist");
-    let _: steplock_core::HookResponse = steplock_core::run(&event, tmp.path()).unwrap();
+    let _: steplock::HookResponse = steplock::run(&event, tmp.path()).unwrap();
 
     let state_path = tmp
         .path()

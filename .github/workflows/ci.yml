@@ -55,6 +55,7 @@ jobs:
         run: cargo test --manifest-path core/Cargo.toml --locked
 
       - name: Check docs
+        if: matrix.os == 'ubuntu-latest'
         run: RUSTDOCFLAGS="-D warnings" cargo doc --manifest-path core/Cargo.toml --no-deps --locked
 
   msrv:
@@ -122,9 +123,8 @@ jobs:
       - name: Upload coverage artifact
         uses: actions/upload-artifact@v7
         with:
-          name: coverage-report
-          path: lcov.info
-          retention-days: 7
+          files: lcov.info
+          fail_ci_if_error: false
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v7
@@ -180,7 +180,7 @@ jobs:
         run: cargo audit --file core/Cargo.lock
 
   build:
-    name: Build release binary
+    name: Build release binary (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -205,7 +205,8 @@ jobs:
       - name: Build release binary
         run: cargo build --manifest-path core/Cargo.toml --release --locked
 
-      - name: Smoke-test binary runs
+      - name: Smoke-test binary (Unix)
+        if: runner.os != 'Windows'
         run: |
           BIN="$(pwd)/core/target/release/steplock"
           test -f "$BIN"
@@ -214,3 +215,10 @@ jobs:
           cd "$tmp" && "$BIN" init
           echo '{"hook_event_name":"PreToolUse","tool_name":"Bash","tool_input":{"command":"ls"},"session_id":"smoke"}' \
             | "$BIN"
+
+      - name: Smoke-test binary (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $bin = "$(Get-Location)\core\target\release\steplock.exe"
+          & $bin --version

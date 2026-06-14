@@ -4,7 +4,7 @@ use std::result;
 use thiserror::Error;
 use toml::de;
 
-/// All errors that can be produced by `steplock-core`.
+/// All errors that can be produced by `steplock`.
 #[derive(Debug, Error)]
 #[non_exhaustive]
 pub enum SteplockError {

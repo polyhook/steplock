@@ -1,4 +1,4 @@
-# steplock-core Architecture
+# steplock Architecture
 
 ## Call flow
 
@@ -55,7 +55,7 @@ Built from `stateDiagram-v2` Mermaid syntax by `flow::parse_mmd`. Only two const
 
 ## Session state file
 
-`.steplock/sessions/<scope-key>/state.json` is the single source of truth. steplock-core writes it (via `save_state`) and `ack.sh` writes it (via `jq + mv`). Both use atomic writes to avoid corruption under concurrent agent access.
+`.steplock/sessions/<scope-key>/state.json` is the single source of truth. steplock writes it (via `save_state`) and `ack.sh` writes it (via `jq + mv`). Both use atomic writes to avoid corruption under concurrent agent access.
 
 Fields written by `save_state`:
 

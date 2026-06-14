@@ -1,6 +1,6 @@
 //! Stateful quality gate library for AI agent tool calls.
 //!
-//! `steplock-core` intercepts tool calls from AI coding assistants (Claude Code,
+//! `steplock` intercepts tool calls from AI coding assistants (Claude Code,
 //! Cursor, etc.) and blocks execution until sequential checklist items are
 //! acknowledged by the agent via `ack.sh`.
 

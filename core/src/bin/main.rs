@@ -8,7 +8,7 @@ use std::path::{Path, PathBuf};
 use std::process;
 
 use polyhook::parse;
-use steplock_core::{run, HookEvent, HookResponse};
+use steplock::{run, HookEvent, HookResponse};
 
 fn main() {
     let args: Vec<String> = env::args().skip(1).collect();
@@ -84,7 +84,7 @@ fn run_validate(repo_root: &Path) -> io::Result<bool> {
         return Ok(true);
     }
 
-    let errors = steplock_core::validate_checklists(&checklists_dir);
+    let errors = steplock::validate_checklists(&checklists_dir);
     if errors.is_empty() {
         println!("steplock: all checklists valid");
         Ok(true)

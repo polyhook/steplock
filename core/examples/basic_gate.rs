@@ -10,7 +10,7 @@ use std::collections::HashMap;
 use std::fs;
 use std::path::Path;
 
-use steplock_core::{HookEvent, HookResponse};
+use steplock::{HookEvent, HookResponse};
 
 fn main() {
     let dir = tempfile::TempDir::new().expect("tmpdir");
@@ -32,7 +32,7 @@ fn main() {
         "claude-code".to_owned(),
     );
 
-    match steplock_core::run(&event, root).expect("run failed") {
+    match steplock::run(&event, root).expect("run failed") {
         HookResponse::Block { message } => {
             println!("BLOCKED\n{message}");
         }
