@@ -10,7 +10,7 @@ static ACK_SH: &str = include_str!("../scripts/ack.sh");
 ///
 /// # Errors
 ///
-/// Returns `Err` if the file cannot be written or made executable.
+/// Returns `Err` if writing the file or setting its permissions fails.
 pub fn ensure_ack_sh(dir: &Path) -> Result<()> {
     let path = dir.join("ack.sh");
     if path.exists() {
@@ -23,7 +23,7 @@ pub fn ensure_ack_sh(dir: &Path) -> Result<()> {
 ///
 /// # Errors
 ///
-/// Returns `Err` if the file cannot be written or made executable.
+/// Returns `Err` if writing the file or setting its permissions fails.
 pub fn ensure_preview_sh(dir: &Path, checklist_name: &str, flow: &FlowGraph) -> Result<()> {
     let path = dir.join("preview.sh");
     if path.exists() {

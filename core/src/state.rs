@@ -30,21 +30,19 @@ impl SessionState {
     }
 }
 
-/// Load session state from a JSON file.
-///
 /// # Errors
 ///
-/// Returns `Err` if the file cannot be read or its content is not valid JSON.
+/// Returns `Err` if the file cannot be read or if its contents are not valid JSON.
 pub fn load_state(path: &Path) -> Result<SessionState> {
     let content = fs::read_to_string(path)?;
     Ok(serde_json::from_str(&content)?)
 }
 
-/// Atomically write state via temp + rename (POSIX rename is atomic same-filesystem).
+/// Atomically write state via temp + mv (POSIX mv is atomic same-filesystem).
 ///
 /// # Errors
 ///
-/// Returns `Err` if the state cannot be serialized or the file cannot be written.
+/// Returns `Err` if serialization, writing the temp file, or the rename fails.
 pub fn save_state(path: &Path, state: &SessionState) -> Result<()> {
     let dir = path.parent().unwrap_or_else(|| Path::new("."));
     let tmp = dir.join(format!("state.json.tmp.{}", std::process::id()));

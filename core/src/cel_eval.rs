@@ -12,12 +12,12 @@ use crate::state::HookEvent;
 ///
 /// # Errors
 ///
-/// Returns `Err` if `expr` fails to compile or execute as a CEL expression.
+/// Returns `Err` if `expr` fails to compile or fails to execute as a CEL expression.
 ///
 /// # Panics
 ///
-/// Panics if the CEL context rejects the hardcoded variable names `"event"`,
-/// `"input"`, or `"output"` — which cannot happen in practice.
+/// Panics if the CEL context rejects a built-in variable name, which cannot happen with the
+/// fixed variable names used here.
 pub fn matches_event(event: &HookEvent, expr: &Option<String>) -> Result<bool> {
     let expr = match expr {
         None => return Ok(true),
