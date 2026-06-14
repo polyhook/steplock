@@ -4,7 +4,7 @@ use std::io::Read;
 use std::path::{Path, PathBuf};
 use std::process;
 
-use steplock_core::{run, HookEvent, HookResponse};
+use steplock_core::{run, validate_checklists, HookEvent, HookResponse};
 
 fn main() {
     let args: Vec<String> = env::args().skip(1).collect();
@@ -18,10 +18,13 @@ fn main() {
                 process::exit(1);
             }
         }
+        [cmd] if cmd == "validate" => {
+            run_validate(&env::current_dir().unwrap());
+        }
         [] => run_hook(),
         _ => {
             eprintln!("steplock: unknown arguments");
-            eprintln!("Usage: steplock [--version | init]");
+            eprintln!("Usage: steplock [--version | init | validate]");
             process::exit(1);
         }
     }
@@ -61,6 +64,29 @@ fn run_init(dir: &Path) -> std::io::Result<()> {
     println!("Next: create a checklist in .steplock/checklists/<name>/");
     println!("      with config.toml and flow.mmd.");
     Ok(())
+}
+
+/// Parse and validate every checklist under `.steplock/checklists/`.
+/// Prints a summary and exits non-zero if any errors are found.
+fn run_validate(dir: &Path) {
+    let checklists_dir = match find_repo_root_from(dir) {
+        Some(root) => root.join(".steplock").join("checklists"),
+        None => {
+            eprintln!("steplock: no .steplock/ directory found");
+            eprintln!("Run 'steplock init' to set up steplock.");
+            process::exit(1);
+        }
+    };
+
+    let errors = validate_checklists(&checklists_dir);
+    if errors.is_empty() {
+        println!("steplock: all checklists valid");
+    } else {
+        for (label, err) in &errors {
+            eprintln!("error: {label}: {err}");
+        }
+        process::exit(1);
+    }
 }
 
 /// Parse the hook event from `reader`, run the gate, and return the polyhook response.

@@ -6,7 +6,9 @@ pub mod flow;
 pub mod run;
 pub mod scripts;
 pub mod state;
+pub mod validate;
 
 pub use error::{Result, SteplockError};
 pub use run::run;
 pub use state::{HookEvent, HookResponse, SessionState};
+pub use validate::validate_checklists;
