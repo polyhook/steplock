@@ -24,7 +24,7 @@ pub fn append(steplock_dir: &Path, event: &str, checklist: &str, state: &str, se
 }
 
 #[cfg(test)]
-#[allow(clippy::indexing_slicing)]
+#[allow(clippy::indexing_slicing, clippy::unwrap_used)]
 mod tests {
     use super::*;
     use std::fs;

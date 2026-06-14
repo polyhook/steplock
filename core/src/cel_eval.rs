@@ -124,6 +124,7 @@ const fn is_truthy(v: &Value) -> bool {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used)]
 mod tests {
     use super::*;
     use serde_json::json;

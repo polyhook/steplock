@@ -209,7 +209,7 @@ steplock writes to two channels that don't touch the hook stdin/stdout protocol:
 
 ### Multiple checklists on the same event
 
-When two `[[checklist]]` blocks both match the same event, steplock processes them in declaration order. The first incomplete checklist blocks. Once it reaches `[*]`, the next checklist's first state blocks on the subsequent invocation.
+When two checklist directories both match the same event, steplock processes them in alphabetical order (sorted by directory name). The first incomplete checklist blocks. Once it reaches `[*]`, the next checklist's first state blocks on the subsequent invocation.
 
 ### Idempotent ack
 

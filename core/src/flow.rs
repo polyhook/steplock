@@ -192,7 +192,7 @@ fn topo_order(initial: &[String], transitions: &HashMap<String, Vec<String>>) ->
 }
 
 #[cfg(test)]
-#[allow(clippy::indexing_slicing)]
+#[allow(clippy::indexing_slicing, clippy::unwrap_used)]
 mod tests {
     use super::*;
 
