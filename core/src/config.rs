@@ -103,7 +103,7 @@ allow_preview_request = true
     #[test]
     fn error_on_invalid_toml() {
         let err = parse_config("bad.toml", "not valid toml !!!@@@");
-        assert!(err.is_err());
+        err.unwrap_err();
     }
 
     #[test]

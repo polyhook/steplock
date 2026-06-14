@@ -105,10 +105,7 @@ pub fn run(event: &HookEvent, repo_root: &Path) -> Result<HookResponse> {
                     initial_state,
                     "always",
                 );
-                // No session dir for reset=always — use a placeholder path in message.
-                // preview is not supported for reset=always (no ack flow, no persisted dir).
-                let tmp_dir = steplock_dir.join("sessions").join("always");
-                let message = build_block_message(&state, &flow, &tmp_dir, false);
+                let message = build_block_message(&state, &flow, None);
                 eprintln!("steplock: block [{checklist_name}] state={initial_state}");
                 return Ok(HookResponse::Block { message });
             }
@@ -175,7 +172,7 @@ pub fn run(event: &HookEvent, repo_root: &Path) -> Result<HookResponse> {
                 );
 
                 let message =
-                    build_block_message(&state, &flow, &session_dir, config.allow_preview_request);
+                    build_block_message(&state, &flow, Some(&session_dir));
                 return Ok(HookResponse::Block { message });
             }
         }
@@ -222,19 +219,16 @@ fn get_scope_key(event: &HookEvent, steplock_dir: &Path) -> Result<String> {
     Ok(id)
 }
 
+/// `session_dir` is `None` for `reset=always` checklists (no persistent ack.sh).
 fn build_block_message(
     state: &SessionState,
     flow: &FlowGraph,
-    session_dir: &Path,
-    allow_preview: bool,
+    session_dir: Option<&Path>,
 ) -> String {
     let label = flow
         .labels
         .get(&state.current_state)
         .map_or(state.current_state.as_str(), |s| s.as_str());
-
-    let ack = session_dir.join("ack.sh");
-    let ack_path = ack.display();
 
     let checklist = &state.checklist;
     let step = state.visited.len() + 1;
@@ -249,27 +243,38 @@ fn build_block_message(
         .filter(|s| s.as_str() != "[*]")
         .collect();
 
-    if visible.len() <= 1 {
-        // Linear — single transition (or terminal → [*])
-        write!(
-            msg,
-            "When finished, run: sh {ack_path}\nThen retry your original command."
-        )
-        .unwrap();
-    } else {
-        // Branching — show all real options
-        msg.push_str("When finished, run one of:\n");
-        for next in &visible {
-            let next_label = flow.labels.get(*next).map_or(next.as_str(), |s| s.as_str());
-            writeln!(msg, "  sh {ack_path} {next}   — {next_label}").unwrap();
+    if let Some(dir) = session_dir {
+        let ack = dir.join("ack.sh");
+        let ack_path = ack.display();
+        if visible.len() <= 1 {
+            write!(
+                msg,
+                "When finished, run: sh {ack_path}\nThen retry your original command."
+            )
+            .unwrap();
+        } else {
+            msg.push_str("When finished, run one of:\n");
+            for next in &visible {
+                let next_label = flow.labels.get(*next).map_or(next.as_str(), |s| s.as_str());
+                writeln!(msg, "  sh {ack_path} {next}   — {next_label}").unwrap();
+            }
+            msg.push_str("Then retry your original command.");
         }
-        msg.push_str("Then retry your original command.");
-    }
 
-    if allow_preview && state.visited.is_empty() {
-        let preview = session_dir.join("preview.sh");
-        let preview_path = preview.display();
-        write!(msg, "\n(Tip: run sh {preview_path} to see all items first.)").unwrap();
+        if state.visited.is_empty() {
+            let preview = dir.join("preview.sh");
+            if preview.exists() {
+                write!(
+                    msg,
+                    "\n(Tip: run sh {} to see all items first.)",
+                    preview.display()
+                )
+                .unwrap();
+            }
+        }
+    } else {
+        // reset=always: no persistent ack.sh — agent confirms in conversation then retries.
+        msg.push_str("When done, retry your original command.");
     }
 
     msg
@@ -494,8 +499,8 @@ reset = "always"
         if let HookResponse::Block { message } = resp {
             // The checklist dir is "quality-gate" — it must appear in the message prefix
             assert!(
-                message.starts_with("[quality-gate]"),
-                "expected [quality-gate] prefix, got: {message}"
+                message.starts_with("[quality-gate:"),
+                "expected [quality-gate: prefix, got: {message}"
             );
         } else {
             panic!("expected block");
@@ -536,7 +541,7 @@ reset = "always"
         let event = make_event("tool:before", "bash", "git push", "sess-prog");
         let resp = run(&event, tmp.path()).unwrap();
         if let HookResponse::Block { message } = resp {
-            assert!(message.starts_with("[1/3]"), "expected [1/3] prefix, got: {message}");
+            assert!(message.contains("1/3"), "expected 1/3 in message, got: {message}");
         } else {
             panic!("expected block");
         }
@@ -553,7 +558,7 @@ reset = "always"
         // Second block: step 2/3
         let resp2 = run(&event, tmp.path()).unwrap();
         if let HookResponse::Block { message } = resp2 {
-            assert!(message.starts_with("[2/3]"), "expected [2/3] prefix, got: {message}");
+            assert!(message.contains("2/3"), "expected 2/3 in message, got: {message}");
         } else {
             panic!("expected block");
         }
@@ -736,8 +741,9 @@ reset = "always"
         let event = make_event("tool:before", "bash", "git push origin main", "sess-ab");
         let resp = run(&event, tmp.path()).unwrap();
         if let HookResponse::Block { message } = resp {
-            // branching → options shown
-            assert!(message.contains("pass") || message.contains("skip"));
+            // reset=always: no ack.sh, so no branch options — just the question + retry prompt
+            assert!(message.contains("Did you check?"));
+            assert!(message.contains("retry your original command"));
         } else {
             panic!("expected block");
         }

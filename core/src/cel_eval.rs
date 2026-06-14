@@ -208,7 +208,7 @@ mod tests {
     fn invalid_cel_returns_error() {
         let ev = event_with_cmd("ls");
         let err = matches_event(&ev, &Some("!!!invalid".to_owned()));
-        assert!(err.is_err());
+        err.unwrap_err();
     }
 
     #[test]
