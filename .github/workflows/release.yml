@@ -48,7 +48,7 @@ jobs:
             ${{ runner.os }}-${{ matrix.target }}-cargo-release-
 
       - name: Build
-        run: cargo build --manifest-path core/Cargo.toml --release --target ${{ matrix.target }}
+        run: cargo build --manifest-path core/Cargo.toml --release --locked --target ${{ matrix.target }}
 
       - name: Package (Unix)
         if: runner.os != 'Windows'
@@ -105,6 +105,6 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
 
       - name: Publish crate
-        run: cargo publish --manifest-path core/Cargo.toml
+        run: cargo publish --manifest-path core/Cargo.toml --locked
         env:
           CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
