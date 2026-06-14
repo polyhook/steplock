@@ -6,6 +6,7 @@ on:
     paths:
       - "core/**"
       - ".github/workflows/ci.yml"
+      - ".steplock/checklists/**"
   pull_request:
     branches: [main]
 
@@ -43,6 +44,9 @@ jobs:
 
       - name: Check docs
         run: RUSTDOCFLAGS="-D warnings" cargo doc --manifest-path core/Cargo.toml --no-deps
+
+      - name: Validate checklists
+        run: cargo run --manifest-path core/Cargo.toml -- validate
 
   build:
     name: Build release binary
