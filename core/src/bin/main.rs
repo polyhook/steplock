@@ -1,3 +1,4 @@
+//! `steplock` CLI binary — reads polyhook events from stdin and enforces quality-gate checklists.
 #![forbid(unsafe_code)]
 
 use std::env;
@@ -76,71 +77,22 @@ For more information: https://github.com/polyhook/steplock",
 /// Validate all checklists in `.steplock/checklists/`. Returns `Ok(true)` if all valid,
 /// `Ok(false)` if any checklist failed validation (errors already printed), or `Err` on I/O.
 fn run_validate(repo_root: &Path) -> std::io::Result<bool> {
-    use steplock_core::{config::parse_config, flow::parse_mmd};
-
     let checklists_dir = repo_root.join(".steplock").join("checklists");
     if !checklists_dir.exists() {
         println!("steplock: no .steplock/checklists/ found");
         return Ok(true);
     }
 
-    let mut entries: Vec<PathBuf> = fs::read_dir(&checklists_dir)?
-        .filter_map(|e| e.ok().map(|e| e.path()))
-        .filter(|p| p.is_dir())
-        .collect();
-    entries.sort();
-
-    if entries.is_empty() {
-        println!("steplock: no checklists found in .steplock/checklists/");
-        return Ok(true);
-    }
-
-    let mut all_ok = true;
-    for entry in entries {
-        let name = entry
-            .file_name()
-            .and_then(|n| n.to_str())
-            .unwrap_or("?")
-            .to_owned();
-        let config_path = entry.join("config.toml");
-        let flow_path = entry.join("flow.mmd");
-
-        if !config_path.exists() {
-            eprintln!("steplock: [{name}] missing config.toml");
-            all_ok = false;
-            continue;
-        }
-        if !flow_path.exists() {
-            eprintln!("steplock: [{name}] missing flow.mmd");
-            all_ok = false;
-            continue;
-        }
-
-        let mut checklist_ok = true;
-
-        let config_str = fs::read_to_string(&config_path)?;
-        if let Err(e) = parse_config(config_path.to_str().unwrap_or("config.toml"), &config_str) {
-            eprintln!("steplock: [{name}] config.toml error: {e}");
-            checklist_ok = false;
-        }
-
-        let flow_str = fs::read_to_string(&flow_path)?;
-        if let Err(e) = parse_mmd(flow_path.to_str().unwrap_or("flow.mmd"), &flow_str) {
-            eprintln!("steplock: [{name}] flow.mmd error: {e}");
-            checklist_ok = false;
-        }
-
-        if checklist_ok {
-            println!("steplock: [{name}] ok");
-        } else {
-            all_ok = false;
-        }
-    }
-
-    if all_ok {
+    let errors = steplock_core::validate_checklists(&checklists_dir);
+    if errors.is_empty() {
         println!("steplock: all checklists valid");
+        Ok(true)
+    } else {
+        for (label, err) in &errors {
+            eprintln!("steplock: [{label}] error: {err}");
+        }
+        Ok(false)
     }
-    Ok(all_ok)
 }
 
 

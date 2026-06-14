@@ -18,7 +18,7 @@ pub enum SteplockError {
         /// Path to the config file that failed to parse.
         path: String,
         /// Underlying TOML parse error.
-        source: toml::de::Error,
+        source: de::Error,
     },
 
     /// A JSON serialization or deserialization error.
@@ -49,4 +49,4 @@ pub enum SteplockError {
 }
 
 /// Convenience alias for `Result<T, SteplockError>`.
-pub type Result<T> = std::result::Result<T, SteplockError>;
+pub type Result<T> = result::Result<T, SteplockError>;

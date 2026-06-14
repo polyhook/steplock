@@ -1,3 +1,4 @@
+//! CLI integration tests for the `steplock` binary.
 use std::fs;
 use std::io::Write;
 use std::process::{Command, Stdio};

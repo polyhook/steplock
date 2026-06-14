@@ -1,10 +1,11 @@
 use serde::{Deserialize, Serialize};
 
+use crate::SteplockError;
+
 /// Controls when the checklist state is reset between invocations.
 #[derive(Debug, Clone, Copy, Default, Deserialize, Serialize)]
 #[non_exhaustive]
 #[serde(rename_all = "snake_case")]
-#[non_exhaustive]
 pub enum Reset {
     /// Reset per session: state persists within a session and resets on the next
     /// invocation after the checklist completes. This is the default.

@@ -1,3 +1,4 @@
+//! Integration tests for the steplock gate runner.
 use std::collections::HashMap;
 use std::fs;
 use std::path::Path;
@@ -11,14 +12,14 @@ fn push_event(session: &str) -> HookEvent {
         "command".to_owned(),
         serde_json::Value::String("git push origin main".to_owned()),
     );
-    HookEvent {
-        event: "tool:before".to_owned(),
-        tool: "bash".to_owned(),
+    HookEvent::new(
+        "tool:before".to_owned(),
+        "bash".to_owned(),
         input,
-        output: HashMap::new(),
-        session_id: session.to_owned(),
-        caller: "claude-code".to_owned(),
-    }
+        HashMap::new(),
+        session.to_owned(),
+        "claude-code".to_owned(),
+    )
 }
 
 fn write_checklist(root: &Path, name: &str, steps: &[(&str, &str)]) {
@@ -182,14 +183,14 @@ fn cel_match_input_gates_only_matching_commands() {
         "command".to_owned(),
         serde_json::Value::String("ls -la".to_owned()),
     );
-    let ls_event = HookEvent {
-        event: "tool:before".to_owned(),
-        tool: "bash".to_owned(),
-        input: input_ls,
-        output: HashMap::new(),
-        session_id: "s-cel".to_owned(),
-        caller: "claude-code".to_owned(),
-    };
+    let ls_event = HookEvent::new(
+        "tool:before".to_owned(),
+        "bash".to_owned(),
+        input_ls,
+        HashMap::new(),
+        "s-cel".to_owned(),
+        "claude-code".to_owned(),
+    );
     // ls command: no "push" word → approve
     assert!(matches!(
         steplock_core::run(&ls_event, tmp.path()).unwrap(),
@@ -202,14 +203,14 @@ fn cel_match_input_gates_only_matching_commands() {
         // "push" appears only in a path, not as a word
         serde_json::Value::String("git add .steplock/checklists/pre-push/config.toml".to_owned()),
     );
-    let path_event = HookEvent {
-        event: "tool:before".to_owned(),
-        tool: "bash".to_owned(),
-        input: input_path,
-        output: HashMap::new(),
-        session_id: "s-cel".to_owned(),
-        caller: "claude-code".to_owned(),
-    };
+    let path_event = HookEvent::new(
+        "tool:before".to_owned(),
+        "bash".to_owned(),
+        input_path,
+        HashMap::new(),
+        "s-cel".to_owned(),
+        "claude-code".to_owned(),
+    );
     // "push" in path but not a standalone word → approve
     assert!(matches!(
         steplock_core::run(&path_event, tmp.path()).unwrap(),

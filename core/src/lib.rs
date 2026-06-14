@@ -22,6 +22,7 @@ pub mod run;
 pub(crate) mod scripts;
 /// Session state persistence.
 pub mod state;
+/// Checklist validation utilities.
 pub mod validate;
 
 pub use error::{Result, SteplockError};

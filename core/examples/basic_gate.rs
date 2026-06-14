@@ -17,21 +17,19 @@ fn main() {
 
     write_checklist(root);
 
-    let event = HookEvent {
-        event: "tool:before".to_owned(),
-        tool: "bash".to_owned(),
-        input: {
-            let mut m = HashMap::new();
-            m.insert(
-                "command".to_owned(),
-                serde_json::Value::String("git push origin main".to_owned()),
-            );
-            m
-        },
-        output: HashMap::new(),
-        session_id: "example-session".to_owned(),
-        caller: "claude-code".to_owned(),
-    };
+    let mut input = HashMap::new();
+    input.insert(
+        "command".to_owned(),
+        serde_json::Value::String("git push origin main".to_owned()),
+    );
+    let event = HookEvent::new(
+        "tool:before".to_owned(),
+        "bash".to_owned(),
+        input,
+        HashMap::new(),
+        "example-session".to_owned(),
+        "claude-code".to_owned(),
+    );
 
     match steplock_core::run(&event, root).expect("run failed") {
         HookResponse::Block { message } => {
@@ -40,6 +38,7 @@ fn main() {
         HookResponse::Approve => {
             println!("APPROVED — no active gate");
         }
+        _ => {}
     }
 }
 

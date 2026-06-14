@@ -50,7 +50,7 @@ pub fn load_state(path: &Path) -> Result<SessionState> {
 /// Returns an error if serialization fails or the write or rename fails.
 pub fn save_state(path: &Path, state: &SessionState) -> Result<()> {
     let dir = path.parent().unwrap_or_else(|| Path::new("."));
-    let tmp = dir.join(format!("state.json.tmp.{}", std::process::id()));
+    let tmp = dir.join(format!("state.json.tmp.{}", process::id()));
     let content = serde_json::to_string_pretty(state)?;
     fs::write(&tmp, content)?;
     fs::rename(&tmp, path)?;
@@ -88,6 +88,7 @@ pub struct HookEvent {
 }
 
 impl HookEvent {
+    /// Construct a [`HookEvent`] from its constituent fields.
     pub fn new(
         event: String,
         tool: String,
