@@ -91,7 +91,10 @@ pub fn run(event: &HookEvent, repo_root: &Path) -> Result<HookResponse> {
                     .get(initial_state)
                     .cloned()
                     .unwrap_or_default();
-                let next_state = transitions.first().cloned().filter(|_| transitions.len() == 1);
+                let next_state = transitions
+                    .first()
+                    .cloned()
+                    .filter(|_| transitions.len() == 1);
                 let state = SessionState {
                     checklist: checklist_name.clone(),
                     current_state: initial_state.clone(),
@@ -153,8 +156,10 @@ pub fn run(event: &HookEvent, repo_root: &Path) -> Result<HookResponse> {
                 }
 
                 // next_state: auto-advance when only one transition (may be "[*]").
-                state.next_state =
-                    raw_transitions.first().cloned().filter(|_| raw_transitions.len() == 1);
+                state.next_state = raw_transitions
+                    .first()
+                    .cloned()
+                    .filter(|_| raw_transitions.len() == 1);
                 state.transitions = raw_transitions;
 
                 save_state(&state_path, &state)?;
@@ -175,8 +180,7 @@ pub fn run(event: &HookEvent, repo_root: &Path) -> Result<HookResponse> {
                     checklist_name, state.current_state, scope_key
                 );
 
-                let message =
-                    build_block_message(&state, &flow, Some(&session_dir));
+                let message = build_block_message(&state, &flow, Some(&session_dir));
                 return Ok(HookResponse::Block { message });
             }
         }
@@ -517,13 +521,18 @@ reset = "always"
         let event = make_event("tool:before", "bash", "git push", "sess-prog");
         let resp = run(&event, tmp.path()).unwrap();
         if let HookResponse::Block { message } = resp {
-            assert!(message.contains("1/3"), "expected 1/3 in message, got: {message}");
+            assert!(
+                message.contains("1/3"),
+                "expected 1/3 in message, got: {message}"
+            );
         } else {
             panic!("expected block");
         }
 
         // Advance state manually to simulate ack
-        let state_path = tmp.path().join(".steplock/sessions/sess-prog/progress-gate/state.json");
+        let state_path = tmp
+            .path()
+            .join(".steplock/sessions/sess-prog/progress-gate/state.json");
         let mut state = load_state(&state_path).unwrap();
         state.visited.push(state.current_state.clone());
         state.current_state = "b".to_owned();
@@ -534,7 +543,10 @@ reset = "always"
         // Second block: step 2/3
         let resp2 = run(&event, tmp.path()).unwrap();
         if let HookResponse::Block { message } = resp2 {
-            assert!(message.contains("2/3"), "expected 2/3 in message, got: {message}");
+            assert!(
+                message.contains("2/3"),
+                "expected 2/3 in message, got: {message}"
+            );
         } else {
             panic!("expected block");
         }
@@ -930,7 +942,9 @@ reset = "session"
         setup_checklist(tmp.path());
 
         // Put state at [*] so the gate sees a completed checklist
-        let session_dir = tmp.path().join(".steplock/sessions/sess-audit/quality-gate");
+        let session_dir = tmp
+            .path()
+            .join(".steplock/sessions/sess-audit/quality-gate");
         fs::create_dir_all(&session_dir).unwrap();
         let state = SessionState {
             checklist: "quality-gate".to_owned(),
@@ -949,8 +963,17 @@ reset = "session"
         assert!(log_path.exists(), "audit.log should exist");
         let content = fs::read_to_string(&log_path).unwrap();
         let entry: serde_json::Value = serde_json::from_str(content.trim()).unwrap();
-        assert_eq!(entry.get("event").and_then(|v| v.as_str()), Some("complete"));
-        assert_eq!(entry.get("checklist").and_then(|v| v.as_str()), Some("quality-gate"));
-        assert_eq!(entry.get("session").and_then(|v| v.as_str()), Some("sess-audit"));
+        assert_eq!(
+            entry.get("event").and_then(|v| v.as_str()),
+            Some("complete")
+        );
+        assert_eq!(
+            entry.get("checklist").and_then(|v| v.as_str()),
+            Some("quality-gate")
+        );
+        assert_eq!(
+            entry.get("session").and_then(|v| v.as_str()),
+            Some("sess-audit")
+        );
     }
 }
