@@ -8,6 +8,10 @@ use crate::flow::FlowGraph;
 static ACK_SH: &str = include_str!("../../scripts/ack.sh");
 
 /// Write ack.sh to `dir` only if it does not already exist.
+///
+/// # Errors
+///
+/// Returns `Err` if the file cannot be written or made executable.
 pub fn ensure_ack_sh(dir: &Path) -> Result<()> {
     let path = dir.join("ack.sh");
     if path.exists() {
@@ -17,6 +21,10 @@ pub fn ensure_ack_sh(dir: &Path) -> Result<()> {
 }
 
 /// Write preview.sh to `dir` only if it does not already exist.
+///
+/// # Errors
+///
+/// Returns `Err` if the file cannot be written or made executable.
 pub fn ensure_preview_sh(dir: &Path, checklist_name: &str, flow: &FlowGraph) -> Result<()> {
     let path = dir.join("preview.sh");
     if path.exists() {

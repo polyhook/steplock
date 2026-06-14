@@ -41,6 +41,11 @@ impl FlowGraph {
     }
 }
 
+/// Parse a Mermaid `stateDiagram-v2` diagram into a `FlowGraph`.
+///
+/// # Errors
+///
+/// Returns `Err` if `content` contains no `[*] --> <state>` initial transition.
 pub fn parse_mmd(path: &str, content: &str) -> Result<FlowGraph> {
     let mut transitions: HashMap<String, Vec<String>> = HashMap::new();
     let mut labels: HashMap<String, String> = HashMap::new();
