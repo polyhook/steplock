@@ -2,6 +2,7 @@
 name = "steplock-core"
 version = "0.1.0"
 edition = "2021"
+rust-version = "1.70"
 description = "Stateful quality gate logic for steplock"
 license = "MIT"
 repository = "https://github.com/polyhook/steplock"
@@ -9,6 +10,10 @@ homepage = "https://github.com/polyhook/steplock"
 readme = "../README.md"
 keywords = ["ai", "hooks", "quality-gate", "polyhook", "checklist"]
 categories = ["development-tools", "command-line-utilities"]
+
+[package.metadata.docs.rs]
+all-features = true
+rustdoc-args = ["--cfg", "docsrs"]
 
 # Clippy lints are ratcheted to `deny` incrementally — every PR promotes at
 # least one more (see .steplock/checklists/pre-push).
@@ -23,6 +28,7 @@ match_same_arms = "deny"
 semicolon_if_nothing_returned = "deny"
 if_not_else = "deny"
 map_unwrap_or = "deny"
+missing_const_for_fn = "deny"
 
 [dependencies]
 polyhook = "0.1.5"
