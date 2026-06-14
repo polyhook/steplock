@@ -77,8 +77,7 @@ needless_pass_by_ref_mut = "deny"
 expect_used = "deny"[dependencies]
 cel-interpreter = "0.8"
 chrono = { version = "0.4", features = ["serde"] }
-unwrap_used = "deny"polyhook = "0.1.5"
-serde = { version = "1", features = ["derive"] }
+unwrap_used = "deny"polyhook = "0.1.5"serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 thiserror = "1"
 toml = "0.8"
