@@ -11,8 +11,11 @@ on:
 
 jobs:
   test:
-    name: Test
-    runs-on: ubuntu-latest
+    name: Test (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
     steps:
       - uses: actions/checkout@v4
 
@@ -33,15 +36,18 @@ jobs:
             ${{ runner.os }}-cargo-
 
       - name: Check formatting
+        if: matrix.os == 'ubuntu-latest'
         run: cargo fmt --manifest-path core/Cargo.toml -- --check
 
       - name: Lint (clippy)
+        if: matrix.os == 'ubuntu-latest'
         run: cargo clippy --manifest-path core/Cargo.toml --all-targets -- -D warnings
 
       - name: Run tests
         run: cargo test --manifest-path core/Cargo.toml
 
       - name: Check docs
+        if: matrix.os == 'ubuntu-latest'
         run: RUSTDOCFLAGS="-D warnings" cargo doc --manifest-path core/Cargo.toml --no-deps
 
   build:
