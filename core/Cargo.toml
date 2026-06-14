@@ -30,8 +30,6 @@ needless_continue = "deny"
 format_push_string = "deny"
 missing_errors_doc = "deny"
 must_use_candidate = "deny"
-=======
->>>>>>> origin/chore/non-exhaustive-public-enums
 
 [dependencies]
 polyhook = "0.1.5"
