@@ -73,6 +73,8 @@ exhaustive_structs = "deny"
 exhaustive_enums = "deny"
 unwrap_in_result = "deny"
 missing_assert_message = "deny"
+wildcard_imports = "deny"
+wildcard_imports = "deny"
 
 [dependencies]
 cel-interpreter = "0.8"
