@@ -95,7 +95,6 @@ fn run_validate(repo_root: &Path) -> io::Result<bool> {
     }
 }
 
-
 fn run_hook() {
     let repo_root = find_repo_root_from(&env::current_dir().unwrap())
         .unwrap_or_else(|| env::current_dir().unwrap());
@@ -467,7 +466,11 @@ reset = "session"
         let tmp = TempDir::new().unwrap();
         let cl_dir = tmp.path().join(".steplock/checklists/no-config");
         fs::create_dir_all(&cl_dir).unwrap();
-        fs::write(cl_dir.join("flow.mmd"), "stateDiagram-v2\n    [*] --> s\n    s --> [*]\n    s: Step\n").unwrap();
+        fs::write(
+            cl_dir.join("flow.mmd"),
+            "stateDiagram-v2\n    [*] --> s\n    s --> [*]\n    s: Step\n",
+        )
+        .unwrap();
         assert!(!run_validate(tmp.path()).unwrap());
     }
 
@@ -476,7 +479,11 @@ reset = "session"
         let tmp = TempDir::new().unwrap();
         let cl_dir = tmp.path().join(".steplock/checklists/no-flow");
         fs::create_dir_all(&cl_dir).unwrap();
-        fs::write(cl_dir.join("config.toml"), "on_event = \"tool:before\"\nreset = \"session\"\n").unwrap();
+        fs::write(
+            cl_dir.join("config.toml"),
+            "on_event = \"tool:before\"\nreset = \"session\"\n",
+        )
+        .unwrap();
         assert!(!run_validate(tmp.path()).unwrap());
     }
 
@@ -486,7 +493,11 @@ reset = "session"
         let cl_dir = tmp.path().join(".steplock/checklists/bad-config");
         fs::create_dir_all(&cl_dir).unwrap();
         fs::write(cl_dir.join("config.toml"), "not valid toml !!!").unwrap();
-        fs::write(cl_dir.join("flow.mmd"), "stateDiagram-v2\n    [*] --> s\n    s --> [*]\n    s: Step\n").unwrap();
+        fs::write(
+            cl_dir.join("flow.mmd"),
+            "stateDiagram-v2\n    [*] --> s\n    s --> [*]\n    s: Step\n",
+        )
+        .unwrap();
         assert!(!run_validate(tmp.path()).unwrap());
     }
 
@@ -495,7 +506,11 @@ reset = "session"
         let tmp = TempDir::new().unwrap();
         let cl_dir = tmp.path().join(".steplock/checklists/bad-flow");
         fs::create_dir_all(&cl_dir).unwrap();
-        fs::write(cl_dir.join("config.toml"), "on_event = \"tool:before\"\nreset = \"session\"\n").unwrap();
+        fs::write(
+            cl_dir.join("config.toml"),
+            "on_event = \"tool:before\"\nreset = \"session\"\n",
+        )
+        .unwrap();
         fs::write(cl_dir.join("flow.mmd"), "stateDiagram-v2\n    a --> b\n").unwrap();
         assert!(!run_validate(tmp.path()).unwrap());
     }
@@ -507,7 +522,11 @@ reset = "session"
         let bad_dir = tmp.path().join(".steplock/checklists/0-bad");
         fs::create_dir_all(&bad_dir).unwrap();
         fs::write(bad_dir.join("config.toml"), "not valid").unwrap();
-        fs::write(bad_dir.join("flow.mmd"), "stateDiagram-v2\n    [*] --> s\n    s --> [*]\n    s: Step\n").unwrap();
+        fs::write(
+            bad_dir.join("flow.mmd"),
+            "stateDiagram-v2\n    [*] --> s\n    s --> [*]\n    s: Step\n",
+        )
+        .unwrap();
         assert!(!run_validate(tmp.path()).unwrap());
     }
 }
