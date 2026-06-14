@@ -236,7 +236,8 @@ fn build_block_message(
     let label = flow
         .labels
         .get(&state.current_state)
-        .map_or(state.current_state.as_str(), |s| s.as_str());
+        .map(String::as_str)
+        .unwrap_or(state.current_state.as_str());
 
     let checklist = &state.checklist;
     let step = state.visited.len() + 1;
@@ -263,7 +264,7 @@ fn build_block_message(
         } else {
             msg.push_str("When finished, run one of:\n");
             for next in &visible {
-                let next_label = flow.labels.get(*next).map_or(next.as_str(), |s| s.as_str());
+                let next_label = flow.labels.get(*next).map(String::as_str).unwrap_or(next);
                 writeln!(msg, "  sh {ack_path} {next}   — {next_label}").unwrap();
             }
             msg.push_str("Then retry your original command.");
