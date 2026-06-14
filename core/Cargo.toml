@@ -47,6 +47,7 @@ checked_conversions = "deny"
 from_iter_instead_of_collect = "deny"
 doc_markdown = "deny"
 str_to_string = "deny"
+multiple_inherent_impl = "deny"
 
 [dependencies]
 polyhook = "0.1.5"
