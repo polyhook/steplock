@@ -242,7 +242,11 @@ fn build_block_message(
 
     if visible.len() <= 1 {
         // Linear — single transition (or terminal → [*])
-        write!(msg, "When finished, run: sh {ack_path}\nThen retry your original command.").unwrap();
+        write!(
+            msg,
+            "When finished, run: sh {ack_path}\nThen retry your original command."
+        )
+        .unwrap();
     } else {
         // Branching — show all real options
         msg.push_str("When finished, run one of:\n");
@@ -256,7 +260,11 @@ fn build_block_message(
     if allow_preview && state.visited.is_empty() {
         let preview = session_dir.join("preview.sh");
         let preview_path = preview.display();
-        write!(msg, "\n(Tip: run sh {preview_path} to see all items first.)").unwrap();
+        write!(
+            msg,
+            "\n(Tip: run sh {preview_path} to see all items first.)"
+        )
+        .unwrap();
     }
 
     msg
