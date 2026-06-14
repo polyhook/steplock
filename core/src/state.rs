@@ -7,6 +7,7 @@ use serde::{Deserialize, Serialize};
 use crate::error::Result;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[non_exhaustive]
 pub struct SessionState {
     pub checklist: String,
     pub current_state: String,
@@ -49,6 +50,7 @@ pub fn init_state(checklist: &str, initial_state: &str) -> SessionState {
 
 /// Normalized hook event passed in from the polyhook layer.
 #[derive(Debug, Clone)]
+#[allow(clippy::exhaustive_structs)]
 pub struct HookEvent {
     /// Polyhook event type: "tool:before", "tool:after", "session:start", etc.
     pub event: String,

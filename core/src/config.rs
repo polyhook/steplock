@@ -2,6 +2,7 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Default, Deserialize, Serialize)]
 #[serde(rename_all = "snake_case")]
+#[non_exhaustive]
 pub enum Reset {
     #[default]
     Session,
@@ -9,6 +10,7 @@ pub enum Reset {
 }
 
 #[derive(Debug, Clone, Deserialize)]
+#[non_exhaustive]
 pub struct ChecklistConfig {
     pub on_event: String,
     /// Tool name to match (e.g. `"bash"`). Omit or set to `""` to match any tool.
