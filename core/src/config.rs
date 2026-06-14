@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Clone, Default, Deserialize, Serialize)]
+#[derive(Debug, Clone, Copy, Default, Deserialize, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub enum Reset {
     #[default]
