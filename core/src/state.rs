@@ -129,6 +129,6 @@ mod tests {
     fn load_state_error_on_missing_file() {
         let tmp = TempDir::new().unwrap();
         let path = tmp.path().join("nonexistent.json");
-        assert!(load_state(&path).is_err());
+        load_state(&path).unwrap_err();
     }
 }
