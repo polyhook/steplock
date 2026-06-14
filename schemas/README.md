@@ -40,17 +40,21 @@ Evaluated by [`cel-interpreter`](https://crates.io/crates/cel-interpreter) — f
 
 | Variable       | Resolves to                                                        |
 | -------------- | ------------------------------------------------------------------ |
-| `input.<key>`  | Field from `HookEvent.input` — e.g. `input.command`, `input.path` |
-| `output.<key>` | Field from `HookEvent.output` (for `tool:after` events)            |
-| `event.tool`   | Normalized tool name                                               |
-| `event.event`  | Event type                                                         |
-| `event.caller` | Caller kind — `"claude-code"`, `"cursor"`, etc.                    |
+| `input.<key>`        | Field from `HookEvent.input` — e.g. `input.command`, `input.path` |
+| `input.command_words`| Whitespace-split tokens of `input.command` (computed by steplock). Use for exact subcommand matching to avoid false positives from file paths. Only present when `input.command` exists. |
+| `output.<key>`       | Field from `HookEvent.output` (for `tool:after` events)            |
+| `event.tool`         | Normalized tool name                                               |
+| `event.event`        | Event type                                                         |
+| `event.caller`       | Caller kind — `"claude-code"`, `"cursor"`, etc.                    |
 
 ### Examples
 
 ```toml
 # push that is not a dry run
 match_input = "input.command.contains('git push') && !input.command.contains('--dry-run')"
+
+# push subcommand — exact word match, avoids paths like 'pre-push/config.toml'
+match_input = "input.command_words.exists(x, x == 'push') && input.command_words.exists(x, x == 'git')"
 
 # push or tag (regex)
 match_input = "input.command.matches('^git (push|tag)')"
