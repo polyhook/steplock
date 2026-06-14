@@ -10,6 +10,9 @@ readme = "../README.md"
 keywords = ["ai", "hooks", "quality-gate", "polyhook", "checklist"]
 categories = ["development-tools", "command-line-utilities"]
 
+[package.metadata.docs.rs]
+all-features = true
+
 # Clippy lints are ratcheted to `deny` incrementally — every PR promotes at
 # least one more (see .steplock/checklists/pre-push).
 [lints.clippy]
@@ -23,6 +26,7 @@ match_same_arms = "deny"
 semicolon_if_nothing_returned = "deny"
 if_not_else = "deny"
 map_unwrap_or = "deny"
+single_char_pattern = "deny"
 
 [dependencies]
 polyhook = "0.1.5"
