@@ -125,6 +125,7 @@ pub fn run(event: &HookEvent, repo_root: &Path) -> Result<HookResponse> {
                 // Checklist complete — approve this attempt and reset state so the
                 // next invocation starts the checklist fresh.
                 if state.is_complete() {
+                    audit::append(&steplock_dir, "complete", &checklist_name, "[*]", &scope_key);
                     save_state(&state_path, &init_state(&checklist_name, initial_state))?;
                     continue;
                 }
@@ -356,6 +357,35 @@ reset = "session"
         let next_state = load_state(&session_dir.join("state.json")).unwrap();
         assert_eq!(next_state.current_state, "clean_code");
         assert!(next_state.visited.is_empty());
+    }
+
+    #[test]
+    fn complete_event_written_to_audit_log() {
+        let tmp = TempDir::new().unwrap();
+        setup_checklist(tmp.path());
+
+        // Pre-seed state at [*] so the next invocation triggers the "complete" path
+        let session_dir = tmp.path().join(".steplock/sessions/sess-audit/quality-gate");
+        fs::create_dir_all(&session_dir).unwrap();
+        save_state(
+            &session_dir.join("state.json"),
+            &SessionState {
+                checklist: "quality-gate".to_owned(),
+                current_state: "[*]".to_owned(),
+                next_state: None,
+                transitions: vec![],
+                visited: vec!["clean_code".to_owned()],
+            },
+        )
+        .unwrap();
+
+        let event = make_event("tool:before", "bash", "git push origin main", "sess-audit");
+        let resp = run(&event, tmp.path()).unwrap();
+        assert!(matches!(resp, HookResponse::Approve));
+
+        let log = std::fs::read_to_string(tmp.path().join(".steplock/audit.log")).unwrap();
+        assert!(log.contains("\"complete\""), "audit log should contain complete event");
+        assert!(log.contains("\"quality-gate\""));
     }
 
     #[test]
