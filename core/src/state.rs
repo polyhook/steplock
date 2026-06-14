@@ -8,6 +8,7 @@ use crate::error::Result;
 
 /// Persisted checklist progress for a single session and checklist.
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[non_exhaustive]
 pub struct SessionState {
     /// Name of the checklist this state belongs to.
     pub checklist: String,
