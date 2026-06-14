@@ -235,9 +235,10 @@ fn build_block_message(
     let ack = session_dir.join("ack.sh");
     let ack_path = ack.display();
 
+    let checklist = &state.checklist;
     let step = state.visited.len() + 1;
     let total = flow.order.len();
-    let mut msg = format!("[{step}/{total}] {label}");
+    let mut msg = format!("[{checklist}: {step}/{total}] {label}");
     msg.push_str("\n\n");
 
     // Real next states visible to the agent (exclude pseudo [*] node).
@@ -453,6 +454,23 @@ reset = "always"
         let resp = run(&event, tmp.path()).unwrap();
         if let HookResponse::Block { message } = resp {
             assert!(message.contains("Did you write clean code?"));
+        } else {
+            panic!("expected block");
+        }
+    }
+
+    #[test]
+    fn block_message_contains_checklist_name() {
+        let tmp = TempDir::new().unwrap();
+        setup_checklist(tmp.path());
+        let event = make_event("tool:before", "bash", "git push origin main", "sess-name");
+        let resp = run(&event, tmp.path()).unwrap();
+        if let HookResponse::Block { message } = resp {
+            // The checklist dir is "quality-gate" — it must appear in the message prefix
+            assert!(
+                message.starts_with("[quality-gate]"),
+                "expected [quality-gate] prefix, got: {message}"
+            );
         } else {
             panic!("expected block");
         }
