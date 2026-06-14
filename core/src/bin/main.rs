@@ -84,17 +84,14 @@ fn run_app(mut reader: impl Read, repo_root: &Path) -> Result<polyhook::HookResp
 }
 
 fn polyhook_to_hook_event(e: polyhook::HookEvent) -> HookEvent {
-    HookEvent {
-        event: e.event.to_string(),
-        tool: e.tool.unwrap_or_default(),
-        input: e.input.map(|m| m.into_iter().collect()).unwrap_or_default(),
-        output: e
-            .output
-            .map(|m| m.into_iter().collect())
-            .unwrap_or_default(),
-        session_id: e.session_id,
-        caller: e.caller.to_string(),
-    }
+    HookEvent::new(
+        e.event.to_string(),
+        e.tool.unwrap_or_default(),
+        e.input.map(|m| m.into_iter().collect()).unwrap_or_default(),
+        e.output.map(|m| m.into_iter().collect()).unwrap_or_default(),
+        e.session_id,
+        e.caller.to_string(),
+    )
 }
 
 /// Walk up from `start` looking for a directory containing `.steplock/`.

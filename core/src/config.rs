@@ -1,6 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Default, Deserialize, Serialize)]
+#[non_exhaustive]
 #[serde(rename_all = "snake_case")]
 pub enum Reset {
     #[default]
@@ -9,6 +10,7 @@ pub enum Reset {
 }
 
 #[derive(Debug, Clone, Deserialize)]
+#[non_exhaustive]
 pub struct ChecklistConfig {
     pub on_event: String,
     /// Tool name to match (e.g. `"bash"`). Omit or set to `""` to match any tool.

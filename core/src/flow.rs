@@ -3,6 +3,7 @@ use std::collections::{HashMap, HashSet};
 use crate::error::{Result, SteplockError};
 
 #[derive(Debug, Clone)]
+#[non_exhaustive]
 pub struct FlowGraph {
     /// States reachable from `[*]` (the initial states).
     pub initial: Vec<String>,
