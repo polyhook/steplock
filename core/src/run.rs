@@ -14,6 +14,12 @@ use crate::state::{init_state, load_state, save_state, HookEvent, HookResponse, 
 /// `repo_root` — the directory that contains `.steplock/`.
 /// Returns `HookResponse::Approve` if no checklist blocks, or
 /// `HookResponse::Block { message }` with the gate message.
+///
+/// # Panics
+///
+/// Panics if a successfully-parsed flow graph contains no initial state (this
+/// cannot happen in practice because [`parse_mmd`] returns an error when no
+/// initial state is found).
 pub fn run(event: &HookEvent, repo_root: &Path) -> Result<HookResponse> {
     let steplock_dir = repo_root.join(".steplock");
 
