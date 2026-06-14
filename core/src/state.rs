@@ -6,27 +6,45 @@ use serde::{Deserialize, Serialize};
 
 use crate::error::Result;
 
+/// Persisted checklist progress for one session scope.
+///
+/// Stored as `state.json` under `.steplock/sessions/<scope-key>/<checklist>/`.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SessionState {
+    /// Name of the checklist (matches the directory name under `.steplock/checklists/`).
     pub checklist: String,
+    /// The active state name, or `"[*]"` when the checklist is complete.
     pub current_state: String,
+    /// Pre-computed next state when there is exactly one outgoing transition; `None` otherwise.
     pub next_state: Option<String>,
+    /// All valid next state names from `current_state` (including `"[*]"`).
     pub transitions: Vec<String>,
+    /// States that have been acknowledged in this session so far.
     pub visited: Vec<String>,
 }
 
 impl SessionState {
+    /// Returns `true` when the checklist has been fully acknowledged (`current_state == "[*]"`).
     pub fn is_complete(&self) -> bool {
         self.current_state == "[*]"
     }
 }
 
+/// Load session state from `path`.
+///
+/// # Errors
+///
+/// Returns an error if the file cannot be read or does not contain valid JSON.
 pub fn load_state(path: &Path) -> Result<SessionState> {
     let content = fs::read_to_string(path)?;
     Ok(serde_json::from_str(&content)?)
 }
 
-/// Atomically write state via temp + mv (POSIX mv is atomic same-filesystem).
+/// Atomically write `state` to `path` via a PID-suffixed temp file and POSIX `mv`.
+///
+/// # Errors
+///
+/// Returns an error if serialization fails or the write or rename fails.
 pub fn save_state(path: &Path, state: &SessionState) -> Result<()> {
     let dir = path.parent().unwrap_or(Path::new("."));
     let tmp = dir.join(format!("state.json.tmp.{}", std::process::id()));
@@ -36,7 +54,7 @@ pub fn save_state(path: &Path, state: &SessionState) -> Result<()> {
     Ok(())
 }
 
-/// Initialize fresh state for the first (initial) state of a flow.
+/// Create fresh [`SessionState`] positioned at `initial_state` with no history.
 pub fn init_state(checklist: &str, initial_state: &str) -> SessionState {
     SessionState {
         checklist: checklist.to_owned(),
@@ -68,7 +86,12 @@ pub struct HookEvent {
 #[derive(Debug)]
 #[non_exhaustive]
 pub enum HookResponse {
-    Block { message: String },
+    /// Block the agent's tool call and show `message` to the agent.
+    Block {
+        /// The checklist prompt shown to the agent.
+        message: String,
+    },
+    /// Allow the tool call to proceed.
     Approve,
 }
 

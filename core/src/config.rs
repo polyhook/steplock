@@ -1,26 +1,39 @@
 use serde::{Deserialize, Serialize};
 
+/// When to reset a checklist's session state.
 #[derive(Debug, Clone, Default, Deserialize, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub enum Reset {
+    /// State persists per session ID and advances on each acknowledgement.
     #[default]
     Session,
+    /// State is never persisted; the checklist blocks from the first step on every invocation.
     Always,
 }
 
+/// Parsed contents of a checklist's `config.toml`.
 #[derive(Debug, Clone, Deserialize)]
 pub struct ChecklistConfig {
+    /// Hook event name to match, e.g. `"tool:before"`.
     pub on_event: String,
     /// Tool name to match (e.g. `"bash"`). Omit or set to `""` to match any tool.
     #[serde(default)]
     pub on_tool: String,
+    /// Optional CEL expression evaluated against the hook event. `None` matches all.
     pub match_input: Option<String>,
+    /// Whether session state persists across invocations or resets every time.
     #[serde(default)]
     pub reset: Reset,
+    /// When `true`, steplock generates `preview.sh` in the session directory.
     #[serde(default)]
     pub allow_preview_request: bool,
 }
 
+/// Parse a checklist `config.toml` from `content`, using `path` in error messages.
+///
+/// # Errors
+///
+/// Returns `SteplockError::Toml` if `content` is not valid TOML or the fields don't match.
 pub fn parse_config(path: &str, content: &str) -> crate::Result<ChecklistConfig> {
     toml::from_str(content).map_err(|e| crate::error::SteplockError::Toml {
         path: path.to_owned(),
