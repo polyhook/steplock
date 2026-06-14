@@ -63,7 +63,6 @@ pub fn run(event: &HookEvent, repo_root: &Path) -> Result<HookResponse> {
         let config_str = fs::read_to_string(&config_path)?;
         let config = parse_config(config_path.to_str().unwrap_or("config.toml"), &config_str)?;
 
-        // Check on_event and on_tool match
         if config.on_event != event.event {
             continue;
         }
@@ -71,7 +70,6 @@ pub fn run(event: &HookEvent, repo_root: &Path) -> Result<HookResponse> {
             continue;
         }
 
-        // Evaluate CEL match_input
         if !cel_eval::matches_event(event, &config.match_input)? {
             continue;
         }
@@ -193,6 +191,109 @@ pub fn run(event: &HookEvent, repo_root: &Path) -> Result<HookResponse> {
     Ok(HookResponse::Approve)
 }
 
+fn block_always(
+    steplock_dir: &Path,
+    checklist_name: &str,
+    initial_state: &str,
+    flow: &FlowGraph,
+    allow_preview: bool,
+) -> Option<HookResponse> {
+    let transitions: Vec<String> = flow
+        .transitions
+        .get(initial_state)
+        .cloned()
+        .unwrap_or_default();
+    let next_state = if transitions.len() == 1 {
+        Some(transitions[0].clone())
+    } else {
+        None
+    };
+    let state = SessionState {
+        checklist: checklist_name.to_owned(),
+        current_state: initial_state.to_owned(),
+        next_state,
+        transitions,
+        visited: vec![],
+    };
+    audit::append(
+        steplock_dir,
+        "block",
+        checklist_name,
+        initial_state,
+        "always",
+    );
+    let tmp_dir = steplock_dir.join("sessions").join("always");
+    let message = build_block_message(&state, flow, &tmp_dir, allow_preview);
+    eprintln!("steplock: block [{checklist_name}] state={initial_state}");
+    Some(HookResponse::Block { message })
+}
+
+fn block_session(
+    event: &HookEvent,
+    steplock_dir: &Path,
+    checklist_name: &str,
+    initial_state: &str,
+    flow: &FlowGraph,
+    allow_preview: bool,
+) -> Result<Option<HookResponse>> {
+    let scope_key = get_scope_key(event, steplock_dir)?;
+    let session_dir = steplock_dir
+        .join("sessions")
+        .join(&scope_key)
+        .join(checklist_name);
+    fs::create_dir_all(&session_dir)?;
+
+    let state_path = session_dir.join("state.json");
+    let mut state = if state_path.exists() {
+        load_state(&state_path)?
+    } else {
+        init_state(checklist_name, initial_state)
+    };
+
+    if state.is_complete() {
+        save_state(&state_path, &init_state(checklist_name, initial_state))?;
+        return Ok(None);
+    }
+
+    let raw_transitions: Vec<String> = flow
+        .transitions
+        .get(&state.current_state)
+        .cloned()
+        .unwrap_or_default();
+
+    if raw_transitions.is_empty() {
+        return Ok(None);
+    }
+
+    state.next_state = if raw_transitions.len() == 1 {
+        Some(raw_transitions[0].clone())
+    } else {
+        None
+    };
+    state.transitions = raw_transitions;
+
+    save_state(&state_path, &state)?;
+    scripts::ensure_ack_sh(&session_dir)?;
+    if allow_preview {
+        scripts::ensure_preview_sh(&session_dir, checklist_name, flow)?;
+    }
+
+    audit::append(
+        steplock_dir,
+        "block",
+        checklist_name,
+        &state.current_state,
+        &scope_key,
+    );
+    eprintln!(
+        "steplock: block [{}] state={} session={}",
+        checklist_name, state.current_state, scope_key
+    );
+
+    let message = build_block_message(&state, flow, &session_dir, allow_preview);
+    Ok(Some(HookResponse::Block { message }))
+}
+
 fn cleanup_session(steplock_dir: &Path, session_id: &str) -> Result<()> {
     if !steplock_dir.exists() {
         return Ok(());
@@ -219,7 +320,6 @@ fn get_scope_key(event: &HookEvent, steplock_dir: &Path) -> Result<String> {
     if !event.session_id.is_empty() {
         return Ok(event.session_id.clone());
     }
-    // Fallback: generate/read a UUID
     let fallback_path = steplock_dir.join("sessions").join("fallback-id");
     if fallback_path.exists() {
         let id = fs::read_to_string(&fallback_path)?;
@@ -249,7 +349,6 @@ fn build_block_message(
     let mut msg = format!("[{checklist}: {step}/{total}] {label}");
     msg.push_str("\n\n");
 
-    // Real next states visible to the agent (exclude pseudo [*] node).
     let visible: Vec<&String> = state
         .transitions
         .iter()
