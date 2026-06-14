@@ -80,11 +80,7 @@ pub fn run(event: &HookEvent, repo_root: &Path) -> Result<HookResponse> {
                     .get(initial_state)
                     .cloned()
                     .unwrap_or_default();
-                let next_state = if transitions.len() == 1 {
-                    Some(transitions[0].clone())
-                } else {
-                    None
-                };
+                let next_state = transitions.first().cloned().filter(|_| transitions.len() == 1);
                 let state = SessionState {
                     checklist: checklist_name.clone(),
                     current_state: initial_state.clone(),
@@ -142,11 +138,8 @@ pub fn run(event: &HookEvent, repo_root: &Path) -> Result<HookResponse> {
                 }
 
                 // next_state: auto-advance when only one transition (may be "[*]").
-                state.next_state = if raw_transitions.len() == 1 {
-                    Some(raw_transitions[0].clone())
-                } else {
-                    None
-                };
+                state.next_state =
+                    raw_transitions.first().cloned().filter(|_| raw_transitions.len() == 1);
                 state.transitions = raw_transitions;
 
                 save_state(&state_path, &state)?;
