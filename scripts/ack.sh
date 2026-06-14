@@ -29,3 +29,12 @@ jq --arg cur "$CURRENT" --arg next "$NEXT" '
   .current_state = $next  |
   .next_state    = null
 ' "$STATE" > "$TMP" && mv "$TMP" "$STATE"
+
+STEPLOCK_DIR="$(cd "$DIR/../../.." && pwd)"
+SESSION="$(basename "$(dirname "$DIR")")"
+CHECKLIST="$(jq -r '.checklist' "$STATE")"
+TS="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+jq -cn --arg e "ack" --arg c "$CHECKLIST" --arg s "$CURRENT" \
+    --arg sess "$SESSION" --arg ts "$TS" \
+    '{event:$e,checklist:$c,state:$s,session:$sess,ts:$ts}' \
+    >> "$STEPLOCK_DIR/audit.log" 2>/dev/null || true
