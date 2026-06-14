@@ -123,6 +123,12 @@ mod tests {
     }
 
     #[test]
+    fn ack_sh_appends_audit_event() {
+        assert!(ACK_SH.contains("audit.log"));
+        assert!(ACK_SH.contains("\"ack\""));
+    }
+
+    #[test]
     fn ensure_ack_sh_is_idempotent() {
         let tmp = TempDir::new().unwrap();
         let path = tmp.path().join("ack.sh");
