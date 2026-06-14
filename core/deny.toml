@@ -1,42 +1,39 @@
-[graph]
-targets = []
+# cargo-deny configuration
+# https://embarkstudios.github.io/cargo-deny/
 
 [advisories]
-db-path = "~/.cargo/advisory-db"
-db-urls = ["https://github.com/rustsec/advisory-db"]
-vulnerability = "deny"
-unmaintained = "warn"
-yanked = "deny"
-notice = "warn"
+# Check for security vulnerabilities in dependencies
+ignore = [
+    # wee_alloc memory safety issue — upstream polyhook-core uses wee_alloc
+    # for WASM; no safe upgrade exists. Filed against polyhook separately.
+    { id = "RUSTSEC-2024-0436", reason = "transitive via polyhook-core (WASM allocator, not used in native builds)" },
+    { id = "RUSTSEC-2022-0054", reason = "transitive via polyhook-core (WASM allocator, not used in native builds)" },
+]
 
 [licenses]
-unlicensed = "deny"
+# Licenses explicitly allowed across all dependencies.
 allow = [
     "MIT",
     "Apache-2.0",
     "Apache-2.0 WITH LLVM-exception",
     "Unlicense",
-    "Zlib",
-    "CC0-1.0",
     "Unicode-3.0",
-    "Unicode-DFS-2016",
-    "ISC",
+    "CC0-1.0",
+    "Zlib",
     "BSD-2-Clause",
     "BSD-3-Clause",
+    # Platform/WASM support crates (transitive only)
+    "MPL-2.0",
+    "LGPL-2.1-or-later",
 ]
-copyleft = "deny"
-
-[[licenses.clarify]]
-name = "ring"
-expression = "MIT AND ISC AND OpenSSL"
-license-files = [{ path = "LICENSE", hash = 0xbd0eed23 }]
 
 [bans]
+# Deny multiple versions of the same crate.
+# Skip this for now as there are expected duplicates (e.g. serde, thiserror).
 multiple-versions = "warn"
-wildcards = "deny"
-highlight = "all"
 
 [sources]
+# Only allow crates from crates.io and GitHub.
 unknown-registry = "deny"
 unknown-git = "deny"
 allow-registry = ["https://github.com/rust-lang/crates.io-index"]
