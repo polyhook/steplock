@@ -13,7 +13,8 @@ fn main() {
             println!("steplock {}", env!("CARGO_PKG_VERSION"));
         }
         [cmd] if cmd == "init" => {
-            if let Err(e) = run_init(&env::current_dir().unwrap()) {
+            let cwd = env::current_dir().unwrap_or_else(|_| PathBuf::from("."));
+            if let Err(e) = run_init(&cwd) {
                 eprintln!("steplock: init failed: {e}");
                 process::exit(1);
             }
@@ -28,8 +29,8 @@ fn main() {
 }
 
 fn run_hook() {
-    let repo_root = find_repo_root_from(&env::current_dir().unwrap())
-        .unwrap_or_else(|| env::current_dir().unwrap());
+    let cwd = env::current_dir().unwrap_or_else(|_| PathBuf::from("."));
+    let repo_root = find_repo_root_from(&cwd).unwrap_or(cwd);
 
     let response = match run_app(std::io::stdin(), &repo_root) {
         Ok(r) => r,
@@ -112,6 +113,7 @@ fn find_repo_root_from(start: &Path) -> Option<PathBuf> {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used)]
 mod tests {
     use super::*;
     use std::fs;

@@ -72,6 +72,7 @@ fn build_preview_sh(checklist_name: &str, flow: &FlowGraph) -> String {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used)]
 mod tests {
     use super::*;
     use crate::flow::parse_mmd;

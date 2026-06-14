@@ -23,20 +23,24 @@ pub fn matches_event(event: &HookEvent, expr: &Option<String>) -> Result<bool> {
 
     let mut ctx = Context::default();
 
-    ctx.add_variable(
+    let add = |ctx: &mut Context, name: &'static str, val| {
+        ctx.add_variable(name, val).map_err(|e| SteplockError::Cel {
+            expr: expr.clone(),
+            message: format!("failed to register CEL variable '{name}': {e}"),
+        })
+    };
+
+    add(
+        &mut ctx,
         "event",
         make_map([
             ("tool", cel_str(&event.tool)),
             ("event", cel_str(&event.event)),
             ("caller", cel_str(&event.caller)),
         ]),
-    )
-    .unwrap();
-
-    ctx.add_variable("input", input_with_words(&event.input))
-        .unwrap();
-    ctx.add_variable("output", json_obj_to_cel(&event.output))
-        .unwrap();
+    )?;
+    add(&mut ctx, "input", input_with_words(&event.input))?;
+    add(&mut ctx, "output", json_obj_to_cel(&event.output))?;
 
     let result = program.execute(&ctx).map_err(|e| SteplockError::Cel {
         expr: expr.clone(),
@@ -122,6 +126,7 @@ fn is_truthy(v: &Value) -> bool {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used)]
 mod tests {
     use super::*;
     use serde_json::json;

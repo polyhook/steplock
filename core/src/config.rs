@@ -29,6 +29,7 @@ pub fn parse_config(path: &str, content: &str) -> crate::Result<ChecklistConfig>
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used)]
 mod tests {
     use super::*;
 

@@ -210,7 +210,7 @@ fn get_scope_key(event: &HookEvent, steplock_dir: &Path) -> Result<String> {
         return Ok(id.trim().to_owned());
     }
     let id = uuid::Uuid::new_v4().to_string();
-    fs::create_dir_all(fallback_path.parent().unwrap())?;
+    fs::create_dir_all(steplock_dir.join("sessions"))?;
     fs::write(&fallback_path, &id)?;
     Ok(id)
 }
@@ -267,6 +267,7 @@ fn build_block_message(
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used)]
 mod tests {
     use super::*;
     use std::collections::HashMap;

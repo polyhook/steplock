@@ -24,6 +24,7 @@ pub fn append(steplock_dir: &Path, event: &str, checklist: &str, state: &str, se
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used)]
 mod tests {
     use super::*;
     use std::fs;
