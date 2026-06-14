@@ -14,6 +14,11 @@ use crate::state::{init_state, load_state, save_state, HookEvent, HookResponse, 
 /// `repo_root` — the directory that contains `.steplock/`.
 /// Returns `HookResponse::Approve` if no checklist blocks, or
 /// `HookResponse::Block { message }` with the gate message.
+///
+/// # Errors
+///
+/// Returns an error if any checklist config, flow file, or session state cannot
+/// be read or written, or if a CEL expression fails to evaluate.
 pub fn run(event: &HookEvent, repo_root: &Path) -> Result<HookResponse> {
     let steplock_dir = repo_root.join(".steplock");
 
