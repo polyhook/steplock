@@ -16,6 +16,7 @@ pub struct SessionState {
 }
 
 impl SessionState {
+    #[must_use]
     pub fn is_complete(&self) -> bool {
         self.current_state == "[*]"
     }
@@ -37,6 +38,7 @@ pub fn save_state(path: &Path, state: &SessionState) -> Result<()> {
 }
 
 /// Initialize fresh state for the first (initial) state of a flow.
+#[must_use]
 pub fn init_state(checklist: &str, initial_state: &str) -> SessionState {
     SessionState {
         checklist: checklist.to_owned(),
