@@ -2,6 +2,7 @@ use std::collections::{HashMap, HashSet};
 
 use crate::error::{Result, SteplockError};
 
+/// Parsed representation of a Mermaid `stateDiagram-v2` checklist flow.
 #[derive(Debug, Clone)]
 pub struct FlowGraph {
     /// States reachable from `[*]` (the initial states).
@@ -44,11 +45,14 @@ impl FlowGraph {
     }
 }
 
-/// Parse a Mermaid `stateDiagram-v2` string into a `FlowGraph`.
+/// Parse a Mermaid `stateDiagram-v2` diagram from `content`.
+///
+/// `path` is used only in error messages.
 ///
 /// # Errors
 ///
-/// Returns `SteplockError::Mermaid` if no `[*] --> <state>` initial transition is found.
+/// Returns [`crate::SteplockError::Mermaid`] if the diagram has no `[*] --> <state>`
+/// initial transition.
 pub fn parse_mmd(path: &str, content: &str) -> Result<FlowGraph> {
     let mut transitions: HashMap<String, Vec<String>> = HashMap::new();
     let mut labels: HashMap<String, String> = HashMap::new();

@@ -1,30 +1,45 @@
 use serde::{Deserialize, Serialize};
 
+/// Controls when the checklist state is reset between invocations.
 #[derive(Debug, Clone, Default, Deserialize, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub enum Reset {
+    /// Reset per session: state persists within a session and resets on the next
+    /// invocation after the checklist completes. This is the default.
     #[default]
     Session,
+    /// Reset on every invocation: block on the first checklist item every time,
+    /// with no state persistence.
     Always,
 }
 
+/// Parsed representation of a checklist's `config.toml`.
 #[derive(Debug, Clone, Deserialize)]
 pub struct ChecklistConfig {
+    /// Polyhook event type that activates this checklist, e.g. `"tool:before"`.
     pub on_event: String,
     /// Tool name to match (e.g. `"bash"`). Omit or set to `""` to match any tool.
     #[serde(default)]
     pub on_tool: String,
+    /// Optional CEL expression evaluated against the event. `None` matches all events.
     pub match_input: Option<String>,
+    /// When to reset checklist progress.
     #[serde(default)]
     pub reset: Reset,
+    /// If `true`, a `preview.sh` script is generated so the agent can inspect
+    /// all checklist items before the first block.
     #[serde(default)]
     pub allow_preview_request: bool,
 }
 
+/// Parse a checklist `config.toml` from `content`.
+///
+/// `path` is used only for error messages.
+///
 /// # Errors
 ///
-/// Returns `SteplockError::Toml` if the content is not valid TOML or does not
-/// match the `ChecklistConfig` schema.
+/// Returns [`crate::SteplockError::Toml`] if `content` is not valid TOML or does
+/// not match the expected schema.
 pub fn parse_config(path: &str, content: &str) -> crate::Result<ChecklistConfig> {
     toml::from_str(content).map_err(|e| crate::error::SteplockError::Toml {
         path: path.to_owned(),
