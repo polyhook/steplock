@@ -32,20 +32,17 @@ pub fn matches_event(event: &HookEvent, expr: &Option<String>) -> Result<bool> {
 
     let mut ctx = Context::default();
 
-    ctx.add_variable(
+    ctx.add_variable_from_value(
         "event",
         make_map([
             ("tool", cel_str(&event.tool)),
             ("event", cel_str(&event.event)),
             ("caller", cel_str(&event.caller)),
         ]),
-    )
-    .unwrap();
+    );
 
-    ctx.add_variable("input", input_with_words(&event.input))
-        .unwrap();
-    ctx.add_variable("output", json_obj_to_cel(&event.output))
-        .unwrap();
+    ctx.add_variable_from_value("input", input_with_words(&event.input));
+    ctx.add_variable_from_value("output", json_obj_to_cel(&event.output));
 
     let result = program.execute(&ctx).map_err(|e| SteplockError::Cel {
         expr: expr.clone(),
