@@ -263,6 +263,21 @@ jobs:
       - name: Check MSRV compiles
         run: cargo check --manifest-path core/Cargo.toml --all-targets
 
+  audit:
+    name: Security audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install cargo-audit
+        run: cargo install cargo-audit --locked
+
+      - name: Run security audit
+        run: cargo audit --manifest-path core/Cargo.toml
+
   build:
     name: Build release binary
     runs-on: ${{ matrix.os }}
