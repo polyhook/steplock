@@ -424,7 +424,7 @@ mod proptest_tests {
         /// `matches_event` never panics for arbitrary events and expressions.
         #[test]
         fn never_panics(event in arb_event(), expr in any::<Option<String>>()) {
-            let _ = matches_event(&event, &expr);
+            let _: crate::Result<bool> = matches_event(&event, &expr);
         }
 
         /// `None` expression always approves regardless of event content.

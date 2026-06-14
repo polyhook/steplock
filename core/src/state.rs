@@ -89,6 +89,8 @@ pub struct HookEvent {
 
 impl HookEvent {
     /// Construct a [`HookEvent`] from its constituent fields.
+    #[must_use]
+    #[allow(clippy::missing_const_for_fn)]
     pub fn new(
         event: String,
         tool: String,

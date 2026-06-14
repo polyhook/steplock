@@ -2,7 +2,7 @@ use std::fs;
 use std::path::Path;
 
 use crate::config::parse_config;
-use crate::error::SteplockError;
+use crate::error::{Result, SteplockError};
 use crate::flow::parse_mmd;
 
 /// Validate all checklists under the given `checklists_dir`.
@@ -14,6 +14,7 @@ use crate::flow::parse_mmd;
 ///
 /// Individual parse errors are collected and returned rather than short-circuiting.
 /// The directory itself is silently skipped if it cannot be read.
+#[must_use]
 pub fn validate_checklists(checklists_dir: &Path) -> Vec<(String, SteplockError)> {
     let mut errors: Vec<(String, SteplockError)> = Vec::new();
     let Ok(entries) = fs::read_dir(checklists_dir) else {
@@ -49,7 +50,7 @@ pub fn validate_checklists(checklists_dir: &Path) -> Vec<(String, SteplockError)
 fn check_file(
     path: &Path,
     label: &str,
-    parse: impl FnOnce(&str, &str) -> crate::error::Result<()>,
+    parse: impl FnOnce(&str, &str) -> Result<()>,
     errors: &mut Vec<(String, SteplockError)>,
 ) {
     match fs::read_to_string(path) {
@@ -64,11 +65,13 @@ fn check_file(
 
 #[cfg(test)]
 mod tests {
+    use std::path::Path;
+
     use super::*;
     use std::fs;
     use tempfile::TempDir;
 
-    fn write_checklist(dir: &std::path::Path, name: &str, config: &str, flow: &str) {
+    fn write_checklist(dir: &Path, name: &str, config: &str, flow: &str) {
         let cl = dir.join(name);
         fs::create_dir_all(&cl).unwrap();
         fs::write(cl.join("config.toml"), config).unwrap();
@@ -98,7 +101,7 @@ reset = "session"
         write_checklist(tmp.path(), "bad-gate", "not valid toml !!!", GOOD_FLOW);
         let errs = validate_checklists(tmp.path());
         assert_eq!(errs.len(), 1);
-        assert!(errs[0].0.contains("config.toml"));
+        assert!(errs.first().map_or(false, |(l, _)| l.contains("config.toml")));
     }
 
     #[test]
@@ -107,7 +110,7 @@ reset = "session"
         write_checklist(tmp.path(), "bad-gate", GOOD_CONFIG, "not a mermaid diagram");
         let errs = validate_checklists(tmp.path());
         assert_eq!(errs.len(), 1);
-        assert!(errs[0].0.contains("flow.mmd"));
+        assert!(errs.first().map_or(false, |(l, _)| l.contains("flow.mmd")));
     }
 
     #[test]
@@ -119,7 +122,7 @@ reset = "session"
         // no config.toml
         let errs = validate_checklists(tmp.path());
         assert_eq!(errs.len(), 1);
-        assert!(errs[0].0.contains("config.toml"));
+        assert!(errs.first().map_or(false, |(l, _)| l.contains("config.toml")));
     }
 
     #[test]

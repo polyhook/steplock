@@ -1,6 +1,8 @@
 //! CLI integration tests for the `steplock` binary.
+use std::fmt::Write as FmtWrite;
 use std::fs;
 use std::io::Write;
+use std::path::Path;
 use std::process::{Command, Stdio};
 use tempfile::TempDir;
 
@@ -17,13 +19,13 @@ fn hook_event(tool_name: &str, command: &str, session: &str) -> String {
     .to_string()
 }
 
-fn checklist(root: &std::path::Path, on_event: &str, on_tool: &str, match_input: Option<&str>) {
+fn checklist(root: &Path, on_event: &str, on_tool: &str, match_input: Option<&str>) {
     let dir = root.join(".steplock/checklists/gate");
     fs::create_dir_all(&dir).unwrap();
     let mut cfg =
         format!("on_event = \"{on_event}\"\non_tool = \"{on_tool}\"\nreset = \"session\"\n");
     if let Some(expr) = match_input {
-        cfg.push_str(&format!("match_input = \"{expr}\"\n"));
+        writeln!(cfg, "match_input = \"{expr}\"").unwrap();
     }
     fs::write(dir.join("config.toml"), cfg).unwrap();
     fs::write(
@@ -33,7 +35,7 @@ fn checklist(root: &std::path::Path, on_event: &str, on_tool: &str, match_input:
     .unwrap();
 }
 
-fn run_steplock(root: &std::path::Path, stdin: &str) -> (i32, String, String) {
+fn run_steplock(root: &Path, stdin: &str) -> (i32, String, String) {
     let mut child = Command::new(STEPLOCK)
         .current_dir(root)
         .stdin(Stdio::piped())

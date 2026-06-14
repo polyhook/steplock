@@ -153,7 +153,7 @@ fn states_that_can_reach_terminal<'a>(
     }
 
     let mut reachable: HashSet<&str> = HashSet::new();
-    let mut queue: VecDeque<&str> = terminal.iter().map(|s| s.as_str()).collect();
+    let mut queue: VecDeque<&str> = terminal.iter().map(String::as_str).collect();
 
     while let Some(state) = queue.pop_front() {
         if reachable.contains(state) {
@@ -431,7 +431,7 @@ mod proptest_tests {
         /// Arbitrary strings never panic — `parse_mmd` always returns `Ok` or `Err`.
         #[test]
         fn parse_never_panics(input in any::<String>()) {
-            let _ = parse_mmd("fuzz.mmd", &input);
+            let _: crate::Result<_> = parse_mmd("fuzz.mmd", &input);
         }
     }
 }

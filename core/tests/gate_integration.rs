@@ -1,5 +1,7 @@
 //! Integration tests for the steplock gate runner.
+#![allow(clippy::panic)]
 use std::collections::HashMap;
+use std::fmt::Write as _;
 use std::fs;
 use std::path::Path;
 
@@ -34,12 +36,12 @@ fn write_checklist(root: &Path, name: &str, steps: &[(&str, &str)]) {
     let mut mmd = "stateDiagram-v2\n".to_owned();
     let mut prev = "[*]";
     for (id, _label) in steps {
-        mmd.push_str(&format!("    {prev} --> {id}\n"));
+        writeln!(mmd, "    {prev} --> {id}").unwrap();
         prev = id;
     }
-    mmd.push_str(&format!("    {prev} --> [*]\n"));
+    writeln!(mmd, "    {prev} --> [*]").unwrap();
     for (id, label) in steps {
-        mmd.push_str(&format!("    {id}: {label}\n"));
+        writeln!(mmd, "    {id}: {label}").unwrap();
     }
     fs::write(cl_dir.join("flow.mmd"), mmd).unwrap();
 }
@@ -231,7 +233,7 @@ fn state_json_readable_as_session_state() {
     let tmp = tempfile::TempDir::new().unwrap();
     write_checklist(tmp.path(), "gate", &[("step_a", "Step A")]);
     let event = push_event("s-persist");
-    let _ = steplock_core::run(&event, tmp.path()).unwrap();
+    let _: steplock_core::HookResponse = steplock_core::run(&event, tmp.path()).unwrap();
 
     let state_path = tmp
         .path()

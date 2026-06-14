@@ -58,11 +58,7 @@ reset = "session"
 
     fs::write(
         dir.join("flow.mmd"),
-        r#"stateDiagram-v2
-    [*] --> tests_pass
-    tests_pass --> [*]
-    tests_pass : Did cargo test pass?
-"#,
+        "stateDiagram-v2\n    [*] --> tests_pass\n    tests_pass --> [*]\n    tests_pass : Did cargo test pass?\n",
     )
     .unwrap();
 }

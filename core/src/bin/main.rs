@@ -76,7 +76,7 @@ For more information: https://github.com/polyhook/steplock",
 
 /// Validate all checklists in `.steplock/checklists/`. Returns `Ok(true)` if all valid,
 /// `Ok(false)` if any checklist failed validation (errors already printed), or `Err` on I/O.
-fn run_validate(repo_root: &Path) -> std::io::Result<bool> {
+fn run_validate(repo_root: &Path) -> io::Result<bool> {
     let checklists_dir = repo_root.join(".steplock").join("checklists");
     if !checklists_dir.exists() {
         println!("steplock: no .steplock/checklists/ found");
@@ -120,17 +120,11 @@ match_input = "input.command.contains('git push')"
 reset = "session"
 "#;
 
-const SAMPLE_FLOW: &str = r#"stateDiagram-v2
-    [*] --> tests_pass
-    tests_pass --> reviewed
-    reviewed --> [*]
-    tests_pass : Tests pass locally
-    reviewed : Code reviewed
-"#;
+const SAMPLE_FLOW: &str = "stateDiagram-v2\n    [*] --> tests_pass\n    tests_pass --> reviewed\n    reviewed --> [*]\n    tests_pass : Tests pass locally\n    reviewed : Code reviewed\n";
 
 /// Create `.steplock/checklists/` and a `.steplock/.gitignore` in `dir`.
 /// Also writes a ready-to-use sample checklist so `git push` is blocked immediately.
-fn run_init(dir: &Path) -> std::io::Result<()> {
+fn run_init(dir: &Path) -> io::Result<()> {
     let checklists_dir = dir.join(".steplock").join("checklists");
     if checklists_dir.exists() {
         println!("steplock: .steplock/checklists/ already exists");
@@ -157,7 +151,7 @@ fn run_init(dir: &Path) -> std::io::Result<()> {
 /// AI agent sessions that crash or are killed never fire `session:stop`, so their
 /// session directories accumulate indefinitely. `steplock clean` flushes them all.
 /// The next hook invocation will start each checklist fresh.
-fn run_clean(dir: &Path) -> std::io::Result<()> {
+fn run_clean(dir: &Path) -> io::Result<()> {
     let steplock_dir = match find_repo_root_from(dir) {
         Some(root) => root.join(".steplock"),
         None => {

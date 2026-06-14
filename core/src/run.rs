@@ -379,35 +379,6 @@ reset = "session"
     }
 
     #[test]
-    fn complete_event_written_to_audit_log() {
-        let tmp = TempDir::new().unwrap();
-        setup_checklist(tmp.path());
-
-        // Pre-seed state at [*] so the next invocation triggers the "complete" path
-        let session_dir = tmp.path().join(".steplock/sessions/sess-audit/quality-gate");
-        fs::create_dir_all(&session_dir).unwrap();
-        save_state(
-            &session_dir.join("state.json"),
-            &SessionState {
-                checklist: "quality-gate".to_owned(),
-                current_state: "[*]".to_owned(),
-                next_state: None,
-                transitions: vec![],
-                visited: vec!["clean_code".to_owned()],
-            },
-        )
-        .unwrap();
-
-        let event = make_event("tool:before", "bash", "git push origin main", "sess-audit");
-        let resp = run(&event, tmp.path()).unwrap();
-        assert!(matches!(resp, HookResponse::Approve));
-
-        let log = std::fs::read_to_string(tmp.path().join(".steplock/audit.log")).unwrap();
-        assert!(log.contains("\"complete\""), "audit log should contain complete event");
-        assert!(log.contains("\"quality-gate\""));
-    }
-
-    #[test]
     fn approves_when_no_checklists_dir() {
         let tmp = TempDir::new().unwrap();
         let event = make_event("tool:before", "bash", "git push origin main", "sess-1");
@@ -693,11 +664,7 @@ allow_preview_request = true
         .unwrap();
         fs::write(
             cl_dir.join("flow.mmd"),
-            r#"stateDiagram-v2
-    [*] --> check
-    check --> [*]
-    check: Did you check?
-"#,
+            "stateDiagram-v2\n    [*] --> check\n    check --> [*]\n    check: Did you check?\n",
         )
         .unwrap();
 
@@ -876,13 +843,7 @@ reset = "session"
         .unwrap();
         fs::write(
             cl_dir.join("flow.mmd"),
-            r#"stateDiagram-v2
-    [*] --> step_one
-    step_one --> step_two
-    step_two --> [*]
-    step_one : Did you do step one?
-    step_two : Did you do step two?
-"#,
+            "stateDiagram-v2\n    [*] --> step_one\n    step_one --> step_two\n    step_two --> [*]\n    step_one : Did you do step one?\n    step_two : Did you do step two?\n",
         )
         .unwrap();
 
@@ -892,32 +853,32 @@ reset = "session"
             .join(".steplock/sessions/sess-lc/ddd-gate/state.json");
 
         // Run 1 — no state yet; blocks on step_one, creates state with transitions
-        let resp = run(&event, tmp.path()).unwrap();
-        assert!(matches!(resp, HookResponse::Block { .. }));
-        let s = load_state(&state_path).unwrap();
-        assert_eq!(s.current_state, "step_one");
-        assert_eq!(s.transitions, vec!["step_two"]);
+        let resp1 = run(&event, tmp.path()).unwrap();
+        assert!(matches!(resp1, HookResponse::Block { .. }));
+        let s1 = load_state(&state_path).unwrap();
+        assert_eq!(s1.current_state, "step_one");
+        assert_eq!(s1.transitions, vec!["step_two"]);
 
         // Simulate ack of step_one → step_two
         simulate_ack(&state_path, "step_two");
 
         // Run 2 — blocks on step_two, transitions updated to ["[*]"]
-        let resp = run(&event, tmp.path()).unwrap();
-        assert!(matches!(resp, HookResponse::Block { .. }));
-        let s = load_state(&state_path).unwrap();
-        assert_eq!(s.current_state, "step_two");
-        assert_eq!(s.transitions, vec!["[*]"]);
-        assert!(s.visited.contains(&"step_one".to_owned()));
+        let resp2 = run(&event, tmp.path()).unwrap();
+        assert!(matches!(resp2, HookResponse::Block { .. }));
+        let s2 = load_state(&state_path).unwrap();
+        assert_eq!(s2.current_state, "step_two");
+        assert_eq!(s2.transitions, vec!["[*]"]);
+        assert!(s2.visited.contains(&"step_one".to_owned()));
 
         // Simulate ack of step_two → [*]
         simulate_ack(&state_path, "[*]");
 
         // Run 3 — checklist complete, approves and resets state
-        let resp = run(&event, tmp.path()).unwrap();
-        assert!(matches!(resp, HookResponse::Approve));
-        let s = load_state(&state_path).unwrap();
-        assert_eq!(s.current_state, "step_one"); // reset to initial
-        assert!(s.visited.is_empty());
+        let resp3 = run(&event, tmp.path()).unwrap();
+        assert!(matches!(resp3, HookResponse::Approve));
+        let s3 = load_state(&state_path).unwrap();
+        assert_eq!(s3.current_state, "step_one"); // reset to initial
+        assert!(s3.visited.is_empty());
     }
 
     #[test]
@@ -988,8 +949,8 @@ reset = "session"
         assert!(log_path.exists(), "audit.log should exist");
         let content = fs::read_to_string(&log_path).unwrap();
         let entry: serde_json::Value = serde_json::from_str(content.trim()).unwrap();
-        assert_eq!(entry["event"], "complete");
-        assert_eq!(entry["checklist"], "quality-gate");
-        assert_eq!(entry["session"], "sess-audit");
+        assert_eq!(entry.get("event").and_then(|v| v.as_str()), Some("complete"));
+        assert_eq!(entry.get("checklist").and_then(|v| v.as_str()), Some("quality-gate"));
+        assert_eq!(entry.get("session").and_then(|v| v.as_str()), Some("sess-audit"));
     }
 }
