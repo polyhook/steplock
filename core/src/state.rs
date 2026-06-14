@@ -75,7 +75,14 @@ impl HookEvent {
         session_id: String,
         caller: String,
     ) -> Self {
-        Self { event, tool, input, output, session_id, caller }
+        Self {
+            event,
+            tool,
+            input,
+            output,
+            session_id,
+            caller,
+        }
     }
 }
 

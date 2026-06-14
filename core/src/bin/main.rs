@@ -88,7 +88,9 @@ fn polyhook_to_hook_event(e: polyhook::HookEvent) -> HookEvent {
         e.event.to_string(),
         e.tool.unwrap_or_default(),
         e.input.map(|m| m.into_iter().collect()).unwrap_or_default(),
-        e.output.map(|m| m.into_iter().collect()).unwrap_or_default(),
+        e.output
+            .map(|m| m.into_iter().collect())
+            .unwrap_or_default(),
         e.session_id,
         e.caller.to_string(),
     )
