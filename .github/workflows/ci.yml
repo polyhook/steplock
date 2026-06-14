@@ -67,6 +67,15 @@ jobs:
       - name: Build on MSRV
         run: cargo build --manifest-path core/Cargo.toml
 
+  deny:
+    name: Dependency audit (cargo deny)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: EmbarkStudios/cargo-deny-action@v2
+        with:
+          manifest-path: core/Cargo.toml
+
   build:
     name: Build release binary
     runs-on: ${{ matrix.os }}
