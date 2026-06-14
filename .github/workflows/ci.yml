@@ -44,6 +44,29 @@ jobs:
       - name: Check docs
         run: RUSTDOCFLAGS="-D warnings" cargo doc --manifest-path core/Cargo.toml --no-deps
 
+  test-windows:
+    name: Test (Windows)
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo registry
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            core/target
+          key: windows-cargo-${{ hashFiles('core/Cargo.lock') }}
+          restore-keys: |
+            windows-cargo-
+
+      - name: Run tests
+        run: cargo test --manifest-path core/Cargo.toml
+
   build:
     name: Build release binary
     runs-on: ${{ matrix.os }}
