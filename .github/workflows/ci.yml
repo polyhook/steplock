@@ -44,6 +44,20 @@ jobs:
       - name: Check docs
         run: RUSTDOCFLAGS="-D warnings" cargo doc --manifest-path core/Cargo.toml --no-deps
 
+  unused-deps:
+    name: Check unused dependencies (cargo-machete)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install cargo-machete
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-machete
+
+      - name: Check for unused dependencies
+        run: cargo machete core/
+
   build:
     name: Build release binary
     runs-on: ${{ matrix.os }}
