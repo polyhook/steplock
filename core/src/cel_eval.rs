@@ -355,4 +355,21 @@ mod tests {
         )
         .unwrap());
     }
+
+    // Regression test: `command_words` splits the *entire* shell command including
+    // the -m message text, so "push" in a commit message must not trigger the
+    // pre-push gate.  The safe guard is to also require that "commit" is absent.
+    #[test]
+    fn pre_push_expr_does_not_trigger_on_commit_with_push_in_message() {
+        let ev = event_with_cmd("git -C /repo commit -m \"add CI push path filter\"");
+        let safe_expr = "input.command_words.exists(x, x == 'push') && !input.command_words.exists(x, x == 'commit')";
+        assert!(!matches_event(&ev, &Some(safe_expr.to_owned())).unwrap());
+    }
+
+    #[test]
+    fn pre_push_expr_still_matches_git_push() {
+        let ev = event_with_cmd("git -C /repo push origin main");
+        let safe_expr = "input.command_words.exists(x, x == 'push') && !input.command_words.exists(x, x == 'commit')";
+        assert!(matches_event(&ev, &Some(safe_expr.to_owned())).unwrap());
+    }
 }

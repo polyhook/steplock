@@ -2,6 +2,6 @@
 
 on_event = "tool:before"
 on_tool = "bash"
-match_input = "input.command_words.exists(x, x == 'push')"
+match_input = "input.command_words.exists(x, x == 'push') && !input.command_words.exists(x, x == 'commit')"
 reset = "session"
 allow_preview_request = true
