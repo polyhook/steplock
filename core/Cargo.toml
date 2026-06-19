@@ -78,6 +78,11 @@ expect_used = "deny"
 too_many_lines = "deny"
 unwrap_used = "deny"
 wildcard_imports = "deny"
+# A diverging `match`/`if let` whose only job is to bind a value or bail out of
+# the function reads as boilerplate and buries the happy path. Prefer the
+# `let ... else { ... }` form so the binding and its divergence are stated once,
+# the bound name stays in the enclosing scope, and the early return is obvious.
+manual_let_else = "deny"
 
 [dependencies]
 cel-interpreter = "0.10"
