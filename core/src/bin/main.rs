@@ -29,13 +29,8 @@ fn main() {
         [cmd] if cmd == "validate" => {
             let dir = env::current_dir().unwrap_or_else(|_| PathBuf::from("."));
             let root = find_repo_root_from(&dir).unwrap_or(dir);
-            match run_validate(&root) {
-                Ok(true) => {}
-                Ok(false) => process::exit(1),
-                Err(e) => {
-                    eprintln!("steplock: validate failed: {e}");
-                    process::exit(1);
-                }
+            if !run_validate(&root) {
+                process::exit(1);
             }
         }
         [cmd] if cmd == "clean" => {
@@ -75,24 +70,24 @@ For more information: https://github.com/polyhook/steplock",
     );
 }
 
-/// Validate all checklists in `.steplock/checklists/`. Returns `Ok(true)` if all valid,
-/// `Ok(false)` if any checklist failed validation (errors already printed), or `Err` on I/O.
-fn run_validate(repo_root: &Path) -> io::Result<bool> {
+/// Validate all checklists in `.steplock/checklists/`. Returns `true` if all valid,
+/// `false` if any checklist failed validation (errors already printed).
+fn run_validate(repo_root: &Path) -> bool {
     let checklists_dir = repo_root.join(".steplock").join("checklists");
     if !checklists_dir.exists() {
         println!("steplock: no .steplock/checklists/ found");
-        return Ok(true);
+        return true;
     }
 
     let errors = steplock::validate_checklists(&checklists_dir);
     if errors.is_empty() {
         println!("steplock: all checklists valid");
-        Ok(true)
+        true
     } else {
         for (label, err) in &errors {
             eprintln!("steplock: [{label}] error: {err}");
         }
-        Ok(false)
+        false
     }
 }
 
@@ -446,21 +441,21 @@ reset = "session"
     #[test]
     fn validate_returns_true_when_no_checklists_dir() {
         let tmp = TempDir::new().unwrap();
-        assert!(run_validate(tmp.path()).unwrap());
+        assert!(run_validate(tmp.path()));
     }
 
     #[test]
     fn validate_returns_true_when_checklists_empty() {
         let tmp = TempDir::new().unwrap();
         fs::create_dir_all(tmp.path().join(".steplock/checklists")).unwrap();
-        assert!(run_validate(tmp.path()).unwrap());
+        assert!(run_validate(tmp.path()));
     }
 
     #[test]
     fn validate_returns_true_for_valid_checklist() {
         let tmp = TempDir::new().unwrap();
         setup_checklist(tmp.path());
-        assert!(run_validate(tmp.path()).unwrap());
+        assert!(run_validate(tmp.path()));
     }
 
     #[test]
@@ -473,7 +468,7 @@ reset = "session"
             "stateDiagram-v2\n    [*] --> s\n    s --> [*]\n    s: Step\n",
         )
         .unwrap();
-        assert!(!run_validate(tmp.path()).unwrap());
+        assert!(!run_validate(tmp.path()));
     }
 
     #[test]
@@ -486,7 +481,7 @@ reset = "session"
             "on_event = \"tool:before\"\nreset = \"session\"\n",
         )
         .unwrap();
-        assert!(!run_validate(tmp.path()).unwrap());
+        assert!(!run_validate(tmp.path()));
     }
 
     #[test]
@@ -500,7 +495,7 @@ reset = "session"
             "stateDiagram-v2\n    [*] --> s\n    s --> [*]\n    s: Step\n",
         )
         .unwrap();
-        assert!(!run_validate(tmp.path()).unwrap());
+        assert!(!run_validate(tmp.path()));
     }
 
     #[test]
@@ -514,7 +509,7 @@ reset = "session"
         )
         .unwrap();
         fs::write(cl_dir.join("flow.mmd"), "stateDiagram-v2\n    a --> b\n").unwrap();
-        assert!(!run_validate(tmp.path()).unwrap());
+        assert!(!run_validate(tmp.path()));
     }
 
     #[test]
@@ -529,6 +524,6 @@ reset = "session"
             "stateDiagram-v2\n    [*] --> s\n    s --> [*]\n    s: Step\n",
         )
         .unwrap();
-        assert!(!run_validate(tmp.path()).unwrap());
+        assert!(!run_validate(tmp.path()));
     }
 }
