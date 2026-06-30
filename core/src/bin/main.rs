@@ -152,13 +152,11 @@ fn run_init(dir: &Path) -> io::Result<()> {
 /// session directories accumulate indefinitely. `steplock clean` flushes them all.
 /// The next hook invocation will start each checklist fresh.
 fn run_clean(dir: &Path) -> io::Result<()> {
-    let steplock_dir = match find_repo_root_from(dir) {
-        Some(root) => root.join(".steplock"),
-        None => {
-            println!("steplock: no .steplock/ directory found — nothing to clean");
-            return Ok(());
-        }
+    let Some(root) = find_repo_root_from(dir) else {
+        println!("steplock: no .steplock/ directory found — nothing to clean");
+        return Ok(());
     };
+    let steplock_dir = root.join(".steplock");
     let sessions_dir = steplock_dir.join("sessions");
     if !sessions_dir.exists() {
         println!("steplock: no sessions to clean");

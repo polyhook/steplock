@@ -78,6 +78,7 @@ expect_used = "deny"
 too_many_lines = "deny"
 unwrap_used = "deny"
 wildcard_imports = "deny"
+single_match_else = "deny"
 
 [dependencies]
 cel-interpreter = "0.10"
