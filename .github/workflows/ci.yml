@@ -90,6 +90,31 @@ jobs:
         with:
           manifest-path: core/Cargo.toml
 
+  linecheck:
+    name: Line count check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo registry
+        uses: actions/cache@v6
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+          key: ${{ runner.os }}-cargo-linecheck-${{ hashFiles('core/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-linecheck-
+
+      - name: Install linecheck
+        run: cargo install linecheck --locked
+
+      - name: Run linecheck
+        run: linecheck .
+
   coverage:
     name: Code coverage (cargo-llvm-cov)
     runs-on: ubuntu-latest
