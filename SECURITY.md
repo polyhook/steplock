@@ -6,7 +6,7 @@
 | ------- | --------- |
 | latest  | ✅        |
 
-Only the latest published version on [crates.io](https://crates.io/crates/steplock-core) receives security fixes.
+Only the latest published version on [crates.io](https://crates.io/crates/steplock) receives security fixes.
 
 ## Reporting a Vulnerability
 

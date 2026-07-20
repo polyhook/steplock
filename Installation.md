@@ -174,6 +174,15 @@ cat .steplock/audit.log
 
 ---
 
+## Other commands
+
+```sh
+steplock validate  # check every config.toml / flow.mmd under .steplock/checklists/ for errors
+steplock clean      # remove all session state under .steplock/sessions/ (checklists restart fresh)
+```
+
+---
+
 ## Editor support
 
 Add the schema hint to `config.toml` (already shown above) for [Taplo](https://taplo.tamasfe.dev) autocomplete and inline validation via the [Even Better TOML](https://marketplace.visualstudio.com/items?itemName=tamasfe.even-better-toml) VS Code extension.
