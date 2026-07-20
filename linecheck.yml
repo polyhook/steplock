@@ -1,0 +1,12 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/tupe12334/linecheck/main/schema/linecheck.schema.json
+
+rules:
+  - pattern: "**/*.rs"
+    warn: 200
+    warn_message: "Getting long — consider splitting into submodules"
+    error: 1100
+    error_message: "File exceeds the adoption-day gate; split before merging or lower the gate"
+
+exclude:
+  - "**/target/**"
+  - "**/Cargo.lock"
