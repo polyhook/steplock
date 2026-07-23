@@ -14,6 +14,7 @@ Rust library implementing the steplock gate logic. Used by the `steplock` CLI bi
 | `scripts`    | Writes `ack.sh` and `preview.sh` to the session directory |
 | `audit`      | Appends JSONL events to `.steplock/audit.log` |
 | `error`      | `SteplockError` enum and `Result<T>` alias |
+| `validate`   | `validate_checklists` — checks all `config.toml`/`flow.mmd` pairs under a checklists dir, used by `steplock validate` |
 
 ## Entry point
 
