@@ -7,7 +7,6 @@ use std::io::{self, Read};
 use std::path::{Path, PathBuf};
 use std::process;
 
-use polyhook::parse;
 use steplock::{run, HookEvent, HookResponse};
 
 fn main() {
@@ -183,12 +182,12 @@ fn run_clean(dir: &Path) -> io::Result<()> {
 /// Parse the hook event from `reader`, run the gate, and return the polyhook response.
 /// Returns `Err(message)` when input is unreadable or the gate engine fails.
 fn run_app(mut reader: impl Read, repo_root: &Path) -> Result<polyhook::HookResponse, String> {
-    let mut bytes = Vec::new();
-    reader
-        .read_to_end(&mut bytes)
-        .map_err(|e| format!("steplock: failed to read hook input: {e}"))?;
-
-    let ph_event = parse::parse_event(&bytes)
+    // Must go through `polyhook::read_from` rather than `parse::parse_event`:
+    // reading is what records the detected caller and event type that
+    // `polyhook::respond` later needs to serialise the response in the calling
+    // agent's own wire format. Parsing the bytes directly leaves that context
+    // unset, so every response falls back to the legacy Claude Code shape.
+    let ph_event = polyhook::read_from(&mut reader)
         .map_err(|e| format!("steplock: failed to read hook input: {e}"))?;
 
     let event = polyhook_to_hook_event(ph_event);
@@ -230,6 +229,7 @@ fn find_repo_root_from(start: &Path) -> Option<PathBuf> {
 #[allow(clippy::unwrap_used)]
 mod tests {
     use super::*;
+    use polyhook::parse;
     use std::fs;
     use tempfile::TempDir;
 
@@ -298,6 +298,54 @@ reset = "session"
         let stdin = claude_stdin("git push origin main", "s1");
         let resp = run_app(stdin.as_bytes(), tmp.path()).unwrap();
         assert!(matches!(resp, polyhook::HookResponse::BlockResponse(_)));
+    }
+
+    /// Serialize through the same path `run_hook` uses, so the assertion covers
+    /// the caller/event context that `run_app` is responsible for recording.
+    fn respond_json(resp: &polyhook::HookResponse) -> serde_json::Value {
+        let mut buf = Vec::new();
+        polyhook::respond_to(&mut buf, resp).unwrap();
+        serde_json::from_slice(&buf).unwrap()
+    }
+
+    #[test]
+    fn block_uses_claude_code_pre_tool_use_deny_not_session_block() {
+        let tmp = TempDir::new().unwrap();
+        setup_checklist(tmp.path());
+        let stdin = claude_stdin("git push origin main", "s1");
+        let resp = run_app(stdin.as_bytes(), tmp.path()).unwrap();
+
+        let json = respond_json(&resp);
+        // Top-level `decision: "block"` terminates the whole Claude Code session;
+        // a PreToolUse gate must deny only the single tool call.
+        assert!(json.get("decision").is_none(), "got session-killing {json}");
+        let decision = json
+            .get("hookSpecificOutput")
+            .and_then(|o| o.get("permissionDecision"))
+            .and_then(|d| d.as_str());
+        assert_eq!(decision, Some("deny"), "got {json}");
+    }
+
+    #[test]
+    fn block_is_serialized_in_the_calling_agents_format() {
+        let tmp = TempDir::new().unwrap();
+        setup_checklist(tmp.path());
+        // Cline wire shape — detected via `type` + `toolName`.
+        let stdin = serde_json::json!({
+            "type": "beforeToolUse",
+            "toolName": "bash",
+            "args": { "command": "git push origin main" },
+            "session": "cl1"
+        })
+        .to_string();
+        let resp = run_app(stdin.as_bytes(), tmp.path()).unwrap();
+
+        let json = respond_json(&resp);
+        assert_eq!(
+            json.get("approved").and_then(serde_json::Value::as_bool),
+            Some(false),
+            "got {json}"
+        );
     }
 
     #[test]
