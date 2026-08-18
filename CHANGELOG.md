@@ -21,6 +21,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Incrementally ratcheted clippy deny list (14 lints and counting)
 
 ### Fixed
+- Hook responses are serialized in the calling agent's own wire format again — the CLI parsed stdin directly instead of reading it through polyhook, discarding the detected caller so every response used the legacy Claude Code shape (which also terminated the whole Claude Code session on a `PreToolUse` block instead of denying the single tool call)
 - `ack.sh` exits 0 with a message when the session is already complete
 - Unknown CLI arguments now exit 1 with a usage hint instead of silently doing nothing
 - `on_tool` is now optional in `config.toml` (omit to match any tool)
