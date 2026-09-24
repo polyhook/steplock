@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- The `steplock init` sample checklist and the `git-push-quality-gate` example matched the literal text `git push`, so `git -C <dir> push` (or any global option between `git` and `push`) skipped the gate. They now match on `command_words`
+
 ## [0.1.0] - 2026-09-24
 
 First published release.

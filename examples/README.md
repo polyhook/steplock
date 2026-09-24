@@ -4,7 +4,7 @@
 
 A four-item quality checklist that gates `git push` commands.
 
-**Trigger**: `tool:before` on `bash` when `input.command.contains('git push')`.
+**Trigger**: `tool:before` on `bash` when the command's words include `git` and `push` (`command_words`, so `git -C dir push` and `git push` both match).
 
 **Flow**: linear — four states in sequence.
 

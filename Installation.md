@@ -101,7 +101,7 @@ Each checklist lives in its own subdirectory. The directory name is the checklis
 
 on_event = "tool:before"
 on_tool   = "bash"
-match_input = "input.command.contains('git push')"
+match_input = "input.command_words.exists(x, x == 'git') && input.command_words.exists(x, x == 'push')"
 reset     = "session"
 allow_preview_request = true
 ```
