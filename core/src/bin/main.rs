@@ -170,7 +170,7 @@ fn run_hook() {
 
 const SAMPLE_CONFIG: &str = r#"on_event = "tool:before"
 on_tool = "bash"
-match_input = "input.command.contains('git push')"
+match_input = "input.command_words.exists(x, x == 'git') && input.command_words.exists(x, x == 'push')"
 reset = "session"
 "#;
 
