@@ -360,3 +360,56 @@ fn clean_global_removes_global_sessions() {
         "global session dir must be removed"
     );
 }
+
+#[test]
+fn hermes_hook_uses_real_home_global_checklist_when_home_is_sandboxed() {
+    let project = TempDir::new().unwrap();
+    let real_home = TempDir::new().unwrap();
+    let profile_home = TempDir::new().unwrap();
+    global_checklist(
+        &real_home.path().join(".config/steplock"),
+        "push-gate",
+        "Shared push question?",
+    );
+    let stdin = serde_json::json!({
+        "hook_event_name": "pre_tool_call",
+        "tool_name": "terminal",
+        "tool_input": { "command": "git push origin main" },
+        "session_id": "hermes-cli",
+        "cwd": project.path(),
+        "extra": {}
+    })
+    .to_string();
+
+    let mut child = Command::new(STEPLOCK)
+        .current_dir(project.path())
+        .env_remove("STEPLOCK_GLOBAL_DIR")
+        .env_remove("XDG_CONFIG_HOME")
+        .env("HOME", profile_home.path())
+        .env("USERPROFILE", profile_home.path())
+        .env("HERMES_REAL_HOME", real_home.path())
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .spawn()
+        .expect("failed to spawn steplock");
+    child
+        .stdin
+        .take()
+        .unwrap()
+        .write_all(stdin.as_bytes())
+        .unwrap();
+    let output = child.wait_with_output().unwrap();
+    let json: serde_json::Value = serde_json::from_slice(&output.stdout).unwrap();
+    assert_eq!(
+        json.get("action").and_then(serde_json::Value::as_str),
+        Some("block"),
+        "expected Hermes block, got {json}"
+    );
+    assert!(
+        json.get("message")
+            .and_then(serde_json::Value::as_str)
+            .unwrap_or_default()
+            .contains("Shared push question?"),
+        "global checklist from the real home must run: {json}"
+    );
+}

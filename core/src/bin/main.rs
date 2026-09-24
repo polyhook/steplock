@@ -8,7 +8,6 @@ use std::path::{Path, PathBuf};
 use std::process;
 
 use clap::{Parser, Subcommand};
-use polyhook::parse;
 use steplock::{global_steplock_dir, run_with_global, HookEvent, HookResponse};
 
 /// Extra help text shown after the generated command list.
@@ -254,12 +253,11 @@ fn run_app(
     repo_root: &Path,
     global_dir: Option<&Path>,
 ) -> Result<polyhook::HookResponse, String> {
-    let mut bytes = Vec::new();
-    reader
-        .read_to_end(&mut bytes)
-        .map_err(|e| format!("steplock: failed to read hook input: {e}"))?;
-
-    let ph_event = parse::parse_event(&bytes)
+    // Read through `polyhook::read_from`, not `parse::parse_event`: reading records the
+    // detected caller (Claude Code, Hermes, Cursor, ...) that `polyhook::respond` needs to
+    // answer in that agent's own wire format. Parsing raw bytes leaves it unset, so every
+    // response falls back to the legacy Claude Code shape.
+    let ph_event = polyhook::read_from(&mut reader)
         .map_err(|e| format!("steplock: failed to read hook input: {e}"))?;
 
     let event = polyhook_to_hook_event(ph_event);
