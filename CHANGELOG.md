@@ -17,7 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `command_words` CEL variable for matching subcommands without false positives from paths
 - `reset = "always"` mode blocks unconditionally on every hook invocation
 - `#[non_exhaustive]` on `HookResponse` and `Reset` for semver-safe extensibility
-- MSRV set to Rust 1.75 in `Cargo.toml`
+- MSRV set to Rust 1.88 in `Cargo.toml`, the oldest toolchain that builds the locked dependencies (`regress` uses let-chains; `toml` 1.1 and `serde_spanned` need edition 2024); the CI MSRV job now really builds and tests on it
 - Windows `x86_64-pc-windows-msvc` binary in the release matrix
 - Module-level rustdoc (`//!`) and public-API doc comments across all modules
 - Append-only JSONL audit log at `.steplock/audit.log`

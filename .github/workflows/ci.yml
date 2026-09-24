@@ -59,13 +59,17 @@ jobs:
         run: RUSTDOCFLAGS="-D warnings" cargo doc --manifest-path core/Cargo.toml --no-deps --locked
 
   msrv:
-    name: MSRV (1.75)
+    name: MSRV (1.88)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
 
-      - name: Install Rust 1.75
-        uses: dtolnay/rust-toolchain@1.75
+      # Pin the toolchain through the `toolchain` input, not the action ref: Dependabot
+      # treats `@1.xx` refs as action versions and "upgrades" them.
+      - name: Install Rust 1.88
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: "1.88"
 
       - name: Cache cargo registry
         uses: actions/cache@v6
@@ -78,8 +82,10 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-cargo-msrv-
 
-      - name: Build on MSRV
-        run: cargo build --manifest-path core/Cargo.toml
+      # `+1.88` overrides rust-toolchain.toml (which pins stable); without it this job
+      # silently builds on stable.
+      - name: Test on MSRV
+        run: cargo +1.88 test --manifest-path core/Cargo.toml --locked
 
   deny:
     name: Dependency audit (cargo deny)
