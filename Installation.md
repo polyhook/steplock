@@ -159,12 +159,14 @@ In `~/.hermes/config.yaml`:
 hooks:
   pre_tool_call:
     - matcher: "terminal"
-      command: "steplock"
+      command: "~/.cargo/bin/steplock"
       timeout: 10
   on_session_end:
-    - command: "steplock"
+    - command: "~/.cargo/bin/steplock"
       timeout: 10
 ```
+
+Use the full path to the binary (`which steplock`; `~/.cargo/bin/steplock` after `cargo install`). Hermes finds a bare `steplock` on `PATH` at runtime, but `hermes hooks doctor` does not search `PATH` and reports `script missing or not executable`.
 
 - `pre_tool_call` with `matcher: "terminal"` gates shell commands. polyhook maps Hermes `terminal` to `bash`, so checklists with `on_tool = "bash"` work unchanged.
 - `on_session_end` removes the session state when the Hermes session ends.
