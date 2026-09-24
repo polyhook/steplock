@@ -1,6 +1,8 @@
 //! Unit tests for `main`.
 use super::*;
+use clap::CommandFactory;
 use std::fs;
+use std::iter;
 use tempfile::TempDir;
 
 fn claude_stdin(cmd: &str, session: &str) -> String {
@@ -298,4 +300,68 @@ fn validate_continues_checking_all_checklists_after_failure() {
     )
     .unwrap();
     assert!(!run_validate(tmp.path(), None).unwrap());
+}
+
+fn parse(args: &[&str]) -> Cli {
+    Cli::try_parse_from(iter::once("steplock").chain(args.iter().copied())).unwrap()
+}
+
+#[test]
+fn cli_no_args_runs_hook() {
+    assert!(
+        parse(&[]).command.is_none(),
+        "no subcommand means hook mode"
+    );
+}
+
+#[test]
+fn cli_parses_init_and_global_flag() {
+    assert!(
+        matches!(
+            parse(&["init"]).command,
+            Some(CliCommand::Init { global: false })
+        ),
+        "plain init"
+    );
+    assert!(
+        matches!(
+            parse(&["init", "--global"]).command,
+            Some(CliCommand::Init { global: true })
+        ),
+        "init --global"
+    );
+}
+
+#[test]
+fn cli_parses_validate_and_clean() {
+    assert!(
+        matches!(parse(&["validate"]).command, Some(CliCommand::Validate)),
+        "validate"
+    );
+    assert!(
+        matches!(
+            parse(&["clean", "--global"]).command,
+            Some(CliCommand::Clean { global: true })
+        ),
+        "clean --global"
+    );
+}
+
+#[test]
+fn cli_rejects_unknown_arguments() {
+    let err = Cli::try_parse_from(["steplock", "--unknown-flag"]).unwrap_err();
+    assert!(err.use_stderr(), "usage errors go to stderr and exit 1");
+}
+
+#[test]
+fn cli_help_and_version_are_not_errors() {
+    for flag in ["--help", "-h", "--version", "-V"] {
+        let err = Cli::try_parse_from(["steplock", flag]).unwrap_err();
+        assert!(!err.use_stderr(), "{flag} prints to stdout and exits 0");
+    }
+}
+
+#[test]
+fn cli_definition_is_valid() {
+    Cli::command().debug_assert();
 }

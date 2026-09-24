@@ -103,6 +103,19 @@ fn short_version_flag() {
 }
 
 #[test]
+fn help_flag_lists_commands_and_exits_zero() {
+    let output = Command::new(STEPLOCK)
+        .arg("--help")
+        .output()
+        .expect("failed to run steplock");
+    assert!(output.status.success(), "--help exits 0");
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    for word in ["init", "validate", "clean", "GLOBAL CHECKLISTS"] {
+        assert!(stdout.contains(word), "help must mention {word}: {stdout}");
+    }
+}
+
+#[test]
 fn unknown_arg_exits_nonzero() {
     let output = Command::new(STEPLOCK)
         .arg("--unknown-flag")
