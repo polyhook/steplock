@@ -87,6 +87,7 @@ manual_let_else = "deny"
 [dependencies]
 cel-interpreter = "0.10"
 chrono = { version = "0.4", features = ["serde"] }
+dirs = "6"
 polyhook = "0.1.5"
 same-file = "1"
 serde = { version = "1", features = ["derive"] }

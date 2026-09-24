@@ -119,7 +119,7 @@ steplock finds the global directory in this order:
 
 1. `$STEPLOCK_GLOBAL_DIR`. Set it to an empty string to turn global checklists off.
 2. `$XDG_CONFIG_HOME/steplock`, when `XDG_CONFIG_HOME` is an absolute path.
-3. `~/.config/steplock` (on Windows without `HOME`, `%USERPROFILE%\.config\steplock`).
+3. `~/.config/steplock`, where `~` is your home directory (`%USERPROFILE%` on Windows).
 
 Rules:
 

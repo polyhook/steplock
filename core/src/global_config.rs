@@ -15,17 +15,21 @@ pub const GLOBAL_DIR_ENV: &str = "STEPLOCK_GLOBAL_DIR";
 /// Lookup order:
 /// 1. `$STEPLOCK_GLOBAL_DIR` — used as-is; an empty value disables global checklists.
 /// 2. `$XDG_CONFIG_HOME/steplock` — when `XDG_CONFIG_HOME` is set to an absolute path.
-/// 3. `$HOME/.config/steplock`, or `%USERPROFILE%\.config\steplock` when `HOME` is unset.
+/// 3. `<home>/.config/steplock`, where `<home>` comes from [`dirs::home_dir`].
 ///
 /// Returns `None` when global checklists are disabled or no home directory is known.
 /// The directory is not required to exist.
 #[must_use]
 pub fn global_steplock_dir() -> Option<PathBuf> {
-    resolve_global_dir(|key| env::var_os(key))
+    resolve_global_dir(|key| env::var_os(key), dirs::home_dir())
 }
 
-/// Resolve the global steplock directory with `var` as the environment lookup.
-fn resolve_global_dir(var: impl Fn(&str) -> Option<OsString>) -> Option<PathBuf> {
+/// Resolve the global steplock directory with `var` as the environment lookup and `home`
+/// as the user's home directory.
+fn resolve_global_dir(
+    var: impl Fn(&str) -> Option<OsString>,
+    home: Option<PathBuf>,
+) -> Option<PathBuf> {
     if let Some(dir) = var(GLOBAL_DIR_ENV) {
         return if dir.is_empty() {
             None
@@ -38,11 +42,7 @@ fn resolve_global_dir(var: impl Fn(&str) -> Option<OsString>) -> Option<PathBuf>
             return Some(xdg.join("steplock"));
         }
     }
-    ["HOME", "USERPROFILE"]
-        .into_iter()
-        .filter_map(&var)
-        .find(|home| !home.is_empty())
-        .map(|home| PathBuf::from(home).join(".config").join("steplock"))
+    home.map(|home| home.join(".config").join("steplock"))
 }
 
 #[cfg(test)]
@@ -70,11 +70,13 @@ mod tests {
 
     #[test]
     fn env_override_wins() {
-        let dir = resolve_global_dir(lookup(&[
-            (GLOBAL_DIR_ENV, abs("custom").into()),
-            ("XDG_CONFIG_HOME", abs("xdg").into()),
-            ("HOME", abs("home").into()),
-        ]));
+        let dir = resolve_global_dir(
+            lookup(&[
+                (GLOBAL_DIR_ENV, abs("custom").into()),
+                ("XDG_CONFIG_HOME", abs("xdg").into()),
+            ]),
+            Some(abs("home")),
+        );
         assert_eq!(
             dir,
             Some(abs("custom")),
@@ -84,63 +86,47 @@ mod tests {
 
     #[test]
     fn empty_env_override_disables_global() {
-        let dir = resolve_global_dir(lookup(&[
-            (GLOBAL_DIR_ENV, OsString::new()),
-            ("HOME", abs("home").into()),
-        ]));
+        let dir = resolve_global_dir(
+            lookup(&[(GLOBAL_DIR_ENV, OsString::new())]),
+            Some(abs("home")),
+        );
         assert_eq!(dir, None, "empty STEPLOCK_GLOBAL_DIR must disable global");
     }
 
     #[test]
     fn uses_xdg_config_home() {
-        let dir = resolve_global_dir(lookup(&[
-            ("XDG_CONFIG_HOME", abs("xdg").into()),
-            ("HOME", abs("home").into()),
-        ]));
+        let dir = resolve_global_dir(
+            lookup(&[("XDG_CONFIG_HOME", abs("xdg").into())]),
+            Some(abs("home")),
+        );
         assert_eq!(dir, Some(abs("xdg").join("steplock")), "XDG path expected");
     }
 
     #[test]
     fn ignores_relative_xdg_config_home() {
-        let dir = resolve_global_dir(lookup(&[
-            ("XDG_CONFIG_HOME", "relative".into()),
-            ("HOME", abs("home").into()),
-        ]));
+        let dir = resolve_global_dir(
+            lookup(&[("XDG_CONFIG_HOME", "relative".into())]),
+            Some(abs("home")),
+        );
         assert_eq!(
             dir,
             Some(home_config("home")),
-            "relative XDG_CONFIG_HOME must fall back to HOME"
+            "relative XDG_CONFIG_HOME must fall back to the home directory"
         );
     }
 
     #[test]
-    fn falls_back_to_home() {
-        let dir = resolve_global_dir(lookup(&[
-            ("HOME", abs("home").into()),
-            ("USERPROFILE", abs("profile").into()),
-        ]));
-        assert_eq!(dir, Some(home_config("home")), "HOME wins over USERPROFILE");
-    }
-
-    #[test]
-    fn falls_back_to_userprofile_without_home() {
-        let dir = resolve_global_dir(lookup(&[
-            ("HOME", OsString::new()),
-            ("USERPROFILE", abs("profile").into()),
-        ]));
-        assert_eq!(
-            dir,
-            Some(home_config("profile")),
-            "USERPROFILE fallback expected"
-        );
+    fn falls_back_to_home_dir() {
+        let dir = resolve_global_dir(lookup(&[]), Some(abs("home")));
+        assert_eq!(dir, Some(home_config("home")), "home fallback expected");
     }
 
     #[test]
     fn none_without_home() {
         assert_eq!(
-            resolve_global_dir(lookup(&[])),
+            resolve_global_dir(lookup(&[]), None),
             None,
-            "no env means no global dir"
+            "no env and no home means no global dir"
         );
     }
 }
