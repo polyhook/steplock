@@ -16,6 +16,8 @@ pub(crate) mod config;
 pub mod error;
 /// Mermaid `stateDiagram-v2` parser.
 pub mod flow;
+/// Location of the global steplock directory shared by every project.
+pub mod global_config;
 /// Gate runner — entry point for polyhook integration.
 pub mod run;
 /// Ack and preview script generation.
@@ -26,6 +28,7 @@ pub mod state;
 pub mod validate;
 
 pub use error::{Result, SteplockError};
-pub use run::run;
+pub use global_config::global_steplock_dir;
+pub use run::{run, run_with_global};
 pub use state::{HookEvent, HookResponse, SessionState};
 pub use validate::validate_checklists;

@@ -101,6 +101,34 @@ stateDiagram-v2
 
 See [`examples/git-push-quality-gate/`](examples/git-push-quality-gate/) for a complete working example.
 
+### Global checklists
+
+A global checklist applies to every project, including projects with no `.steplock/`. Use it for gates you want everywhere, such as a check before every `git push`.
+
+Global checklists live in the global steplock directory, which uses the same layout as `.steplock/`:
+
+```
+~/.config/steplock/
+└── checklists/
+    └── git-push-quality-gate/
+        ├── config.toml
+        └── flow.mmd
+```
+
+steplock finds the global directory in this order:
+
+1. `$STEPLOCK_GLOBAL_DIR`. Set it to an empty string to turn global checklists off.
+2. `$XDG_CONFIG_HOME/steplock`, when `XDG_CONFIG_HOME` is an absolute path.
+3. `~/.config/steplock`.
+
+Rules:
+
+- Project checklists run first. Global checklists run after them, in alphabetical order.
+- A project checklist with the same directory name replaces the global one. An empty `.steplock/checklists/<name>/` directory turns that global checklist off for the project.
+- Session state and the audit log for global checklists are written to the global directory, not to the project.
+
+Run `steplock init --global` to create the directory with a sample checklist. Register the hook once in your user-level tool settings (for Claude Code, `~/.claude/settings.json`) so it runs in every project.
+
 ---
 
 ## Editor support

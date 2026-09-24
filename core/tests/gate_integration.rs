@@ -245,3 +245,153 @@ fn state_json_readable_as_session_state() {
     assert!(state.visited.is_empty());
     assert!(!state.is_complete());
 }
+
+// ── Global checklists ──────────────────────────────────────────────────────
+
+/// Write a one-step checklist into a bare steplock dir (`<dir>/checklists/<name>/`).
+fn write_global_checklist(steplock_dir: &Path, name: &str, label: &str) {
+    let cl_dir = steplock_dir.join("checklists").join(name);
+    fs::create_dir_all(&cl_dir).unwrap();
+    fs::write(
+        cl_dir.join("config.toml"),
+        "on_event = \"tool:before\"\non_tool = \"bash\"\nreset = \"session\"\n",
+    )
+    .unwrap();
+    fs::write(
+        cl_dir.join("flow.mmd"),
+        format!("stateDiagram-v2\n    [*] --> g\n    g --> [*]\n    g: {label}\n"),
+    )
+    .unwrap();
+}
+
+fn block_message(resp: HookResponse) -> String {
+    match resp {
+        HookResponse::Block { message } => message,
+        HookResponse::Approve => panic!("expected block"),
+        _ => panic!("unexpected variant"),
+    }
+}
+
+#[test]
+fn global_checklist_blocks_when_project_has_none() {
+    let project = tempfile::TempDir::new().unwrap();
+    let global = tempfile::TempDir::new().unwrap();
+    write_global_checklist(global.path(), "gate", "Global step");
+
+    let resp =
+        steplock::run_with_global(&push_event("s1"), project.path(), Some(global.path())).unwrap();
+    assert!(
+        block_message(resp).contains("Global step"),
+        "global checklist must block"
+    );
+    assert!(
+        global.path().join("sessions/s1/gate/state.json").exists(),
+        "state must be stored in the global dir"
+    );
+}
+
+#[test]
+fn project_checklists_run_before_global() {
+    let project = tempfile::TempDir::new().unwrap();
+    let global = tempfile::TempDir::new().unwrap();
+    write_checklist(project.path(), "project-gate", &[("p", "Project step")]);
+    write_global_checklist(global.path(), "global-gate", "Global step");
+    let event = push_event("s1");
+
+    let first = steplock::run_with_global(&event, project.path(), Some(global.path())).unwrap();
+    assert!(
+        block_message(first).contains("Project step"),
+        "project checklist must block first"
+    );
+
+    ack(project.path(), "project-gate", "s1", "[*]");
+    let second = steplock::run_with_global(&event, project.path(), Some(global.path())).unwrap();
+    assert!(
+        block_message(second).contains("Global step"),
+        "global checklist must block after the project one completes"
+    );
+}
+
+#[test]
+fn project_checklist_shadows_global_with_same_name() {
+    let project = tempfile::TempDir::new().unwrap();
+    let global = tempfile::TempDir::new().unwrap();
+    write_checklist(project.path(), "gate", &[("p", "Project step")]);
+    write_global_checklist(global.path(), "gate", "Global step");
+    let event = push_event("s1");
+
+    ack_after_block(project.path(), global.path(), &event);
+    let resp = steplock::run_with_global(&event, project.path(), Some(global.path())).unwrap();
+    assert!(
+        matches!(resp, HookResponse::Approve),
+        "shadowed global checklist must not run"
+    );
+}
+
+/// Block once on the project `gate` checklist, then ack it to completion.
+fn ack_after_block(project: &Path, global: &Path, event: &HookEvent) {
+    let resp = steplock::run_with_global(event, project, Some(global)).unwrap();
+    assert!(
+        block_message(resp).contains("Project step"),
+        "project checklist must win over same-name global"
+    );
+    ack(project, "gate", "s1", "[*]");
+}
+
+#[test]
+fn empty_project_dir_disables_same_name_global_checklist() {
+    let project = tempfile::TempDir::new().unwrap();
+    let global = tempfile::TempDir::new().unwrap();
+    fs::create_dir_all(project.path().join(".steplock/checklists/gate")).unwrap();
+    write_global_checklist(global.path(), "gate", "Global step");
+
+    let resp =
+        steplock::run_with_global(&push_event("s1"), project.path(), Some(global.path())).unwrap();
+    assert!(
+        matches!(resp, HookResponse::Approve),
+        "empty same-name project dir must disable the global checklist"
+    );
+}
+
+#[test]
+fn global_dir_equal_to_project_dir_is_evaluated_once() {
+    let project = tempfile::TempDir::new().unwrap();
+    write_checklist(project.path(), "gate", &[("p", "Project step")]);
+    let steplock_dir = project.path().join(".steplock");
+    let event = push_event("s1");
+
+    let first = steplock::run_with_global(&event, project.path(), Some(&steplock_dir)).unwrap();
+    assert!(block_message(first).contains("Project step"), "blocks once");
+    ack(project.path(), "gate", "s1", "[*]");
+    let second = steplock::run_with_global(&event, project.path(), Some(&steplock_dir)).unwrap();
+    assert!(
+        matches!(second, HookResponse::Approve),
+        "same dir must not be evaluated twice"
+    );
+}
+
+#[test]
+fn session_stop_cleans_global_sessions() {
+    let project = tempfile::TempDir::new().unwrap();
+    let global = tempfile::TempDir::new().unwrap();
+    write_global_checklist(global.path(), "gate", "Global step");
+    steplock::run_with_global(&push_event("s1"), project.path(), Some(global.path())).unwrap();
+    assert!(
+        global.path().join("sessions/s1").exists(),
+        "session created"
+    );
+
+    let stop = HookEvent::new(
+        "session:stop".to_owned(),
+        String::new(),
+        HashMap::new(),
+        HashMap::new(),
+        "s1".to_owned(),
+        "claude-code".to_owned(),
+    );
+    steplock::run_with_global(&stop, project.path(), Some(global.path())).unwrap();
+    assert!(
+        !global.path().join("sessions/s1").exists(),
+        "session:stop must clean the global session dir"
+    );
+}

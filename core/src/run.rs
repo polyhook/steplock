@@ -11,102 +11,161 @@ use crate::flow::{parse_mmd, FlowGraph};
 use crate::scripts;
 use crate::state::{init_state, load_state, save_state, HookEvent, HookResponse, SessionState};
 
-/// Run the full steplock gate logic.
+/// Run the full steplock gate logic against the project checklists only.
 ///
 /// `repo_root` — the directory that contains `.steplock/`.
 /// Returns `HookResponse::Approve` if no checklist blocks, or
 /// `HookResponse::Block { message }` with the gate message.
 ///
+/// Equivalent to [`run_with_global`] with no global steplock directory.
+///
 /// # Errors
 ///
 /// Returns `Err` on I/O failures (reading checklist files, writing state) or on invalid
 /// checklist configuration (bad TOML, invalid Mermaid, invalid CEL expression).
-///
-/// # Panics
-///
-/// Panics if `parse_mmd` returns a graph with no initial state, which it guarantees cannot
-/// happen.
 pub fn run(event: &HookEvent, repo_root: &Path) -> Result<HookResponse> {
-    let steplock_dir = repo_root.join(".steplock");
+    run_with_global(event, repo_root, None)
+}
+
+/// Run the gate logic against the project checklists, then the global checklists.
+///
+/// `repo_root` — the directory that contains the project `.steplock/`.
+/// `global_dir` — a steplock directory shared by every project (see
+/// [`crate::global_config::global_steplock_dir`]). It has the same layout as `.steplock/`:
+/// `checklists/`, `sessions/` and `audit.log`.
+///
+/// Project checklists are evaluated first. A global checklist is skipped when the project
+/// has a checklist with the same name, so a project can override or disable it. Session
+/// state for a global checklist lives in `global_dir`, not in the project.
+///
+/// # Errors
+///
+/// Returns `Err` on I/O failures (reading checklist files, writing state) or on invalid
+/// checklist configuration (bad TOML, invalid Mermaid, invalid CEL expression).
+pub fn run_with_global(
+    event: &HookEvent,
+    repo_root: &Path,
+    global_dir: Option<&Path>,
+) -> Result<HookResponse> {
+    let project_dir = repo_root.join(".steplock");
+    let global_dir = global_dir.filter(|g| !is_same_dir(g, &project_dir));
 
     if event.event == "session:stop" {
-        cleanup_session(&steplock_dir, &event.session_id)?;
+        cleanup_session(&project_dir, &event.session_id)?;
+        if let Some(global) = global_dir {
+            cleanup_session(global, &event.session_id)?;
+        }
         return Ok(HookResponse::Approve);
     }
 
-    let checklists_dir = steplock_dir.join("checklists");
-
-    if !checklists_dir.exists() {
-        return Ok(HookResponse::Approve);
+    let project_checklists = checklist_dirs(&project_dir)?;
+    for checklist_dir in &project_checklists {
+        if let Some(resp) = evaluate_checklist(event, &project_dir, checklist_dir)? {
+            return Ok(resp);
+        }
     }
 
-    let mut entries: Vec<PathBuf> = fs::read_dir(&checklists_dir)?
-        .filter_map(|e| e.ok().map(|e| e.path()))
-        .filter(|p| p.is_dir())
-        .collect();
-    entries.sort(); // deterministic declaration order
-
-    for checklist_dir in entries {
-        let checklist_name = checklist_dir
-            .file_name()
-            .and_then(|n| n.to_str())
-            .unwrap_or("")
-            .to_owned();
-
-        let config_path = checklist_dir.join("config.toml");
-        let flow_path = checklist_dir.join("flow.mmd");
-
-        if !config_path.exists() || !flow_path.exists() {
-            continue;
-        }
-
-        let config_str = fs::read_to_string(&config_path)?;
-        let config = parse_config(config_path.to_str().unwrap_or("config.toml"), &config_str)?;
-
-        if config.on_event != event.event {
-            continue;
-        }
-        if !config.on_tool.is_empty() && config.on_tool != event.tool {
-            continue;
-        }
-
-        if !cel_eval::matches_event(event, &config.match_input)? {
-            continue;
-        }
-
-        let flow_str = fs::read_to_string(&flow_path)?;
-        let flow = parse_mmd(flow_path.to_str().unwrap_or("flow.mmd"), &flow_str)?;
-
-        let initial_state = flow.initial.first().ok_or_else(|| SteplockError::Mermaid {
-            path: flow_path.to_str().unwrap_or("flow.mmd").to_owned(),
-            message: "no initial state found".to_owned(),
-        })?;
-
-        match config.reset {
-            Reset::Always => {
-                return Ok(block_reset_always(
-                    &steplock_dir,
-                    &checklist_name,
-                    initial_state,
-                    &flow,
-                ));
+    if let Some(global) = global_dir {
+        let project_names: Vec<_> = project_checklists
+            .iter()
+            .filter_map(|p| p.file_name())
+            .collect();
+        for checklist_dir in checklist_dirs(global)? {
+            let shadowed = checklist_dir
+                .file_name()
+                .is_some_and(|n| project_names.contains(&n));
+            if shadowed {
+                continue;
             }
-            Reset::Session => {
-                if let Some(resp) = block_reset_session(
-                    event,
-                    &steplock_dir,
-                    &checklist_name,
-                    initial_state,
-                    &flow,
-                    config.allow_preview_request,
-                )? {
-                    return Ok(resp);
-                }
+            if let Some(resp) = evaluate_checklist(event, global, &checklist_dir)? {
+                return Ok(resp);
             }
         }
     }
 
     Ok(HookResponse::Approve)
+}
+
+/// `true` when both paths resolve to the same existing directory.
+fn is_same_dir(a: &Path, b: &Path) -> bool {
+    match (fs::canonicalize(a), fs::canonicalize(b)) {
+        (Ok(a), Ok(b)) => a == b,
+        _ => false,
+    }
+}
+
+/// Checklist directories under `<steplock_dir>/checklists/`, sorted by name.
+/// Returns an empty list when the directory does not exist.
+fn checklist_dirs(steplock_dir: &Path) -> Result<Vec<PathBuf>> {
+    let checklists_dir = steplock_dir.join("checklists");
+    if !checklists_dir.exists() {
+        return Ok(vec![]);
+    }
+    let mut entries: Vec<PathBuf> = fs::read_dir(&checklists_dir)?
+        .filter_map(|e| e.ok().map(|e| e.path()))
+        .filter(|p| p.is_dir())
+        .collect();
+    entries.sort(); // deterministic declaration order
+    Ok(entries)
+}
+
+/// Evaluate one checklist. Returns `Some(Block)` when it blocks the event, `None` otherwise.
+fn evaluate_checklist(
+    event: &HookEvent,
+    steplock_dir: &Path,
+    checklist_dir: &Path,
+) -> Result<Option<HookResponse>> {
+    let checklist_name = checklist_dir
+        .file_name()
+        .and_then(|n| n.to_str())
+        .unwrap_or("")
+        .to_owned();
+
+    let config_path = checklist_dir.join("config.toml");
+    let flow_path = checklist_dir.join("flow.mmd");
+
+    if !config_path.exists() || !flow_path.exists() {
+        return Ok(None);
+    }
+
+    let config_str = fs::read_to_string(&config_path)?;
+    let config = parse_config(config_path.to_str().unwrap_or("config.toml"), &config_str)?;
+
+    if config.on_event != event.event {
+        return Ok(None);
+    }
+    if !config.on_tool.is_empty() && config.on_tool != event.tool {
+        return Ok(None);
+    }
+
+    if !cel_eval::matches_event(event, &config.match_input)? {
+        return Ok(None);
+    }
+
+    let flow_str = fs::read_to_string(&flow_path)?;
+    let flow = parse_mmd(flow_path.to_str().unwrap_or("flow.mmd"), &flow_str)?;
+
+    let initial_state = flow.initial.first().ok_or_else(|| SteplockError::Mermaid {
+        path: flow_path.to_str().unwrap_or("flow.mmd").to_owned(),
+        message: "no initial state found".to_owned(),
+    })?;
+
+    match config.reset {
+        Reset::Always => Ok(Some(block_reset_always(
+            steplock_dir,
+            &checklist_name,
+            initial_state,
+            &flow,
+        ))),
+        Reset::Session => block_reset_session(
+            event,
+            steplock_dir,
+            &checklist_name,
+            initial_state,
+            &flow,
+            config.allow_preview_request,
+        ),
+    }
 }
 
 fn block_reset_always(

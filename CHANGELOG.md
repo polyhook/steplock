@@ -8,6 +8,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- Global checklists: `$STEPLOCK_GLOBAL_DIR`, `$XDG_CONFIG_HOME/steplock` or `~/.config/steplock` holds checklists that apply to every project; project checklists with the same name override them
+- `steplock init --global` and `steplock clean --global`; `steplock validate` also checks global checklists
+- `run_with_global` and `global_steplock_dir` library API
 - `steplock init` command creates `.steplock/checklists/` and `.gitignore` skeleton
 - `session:stop` event cleans up the session directory so the checklist resets
 - `allow_preview_request` config option generates a `preview.sh` showing checklist progress

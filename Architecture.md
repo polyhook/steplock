@@ -211,6 +211,16 @@ steplock writes to two channels that don't touch the hook stdin/stdout protocol:
 
 When two checklist directories both match the same event, steplock processes them in alphabetical order (sorted by directory name). The first incomplete checklist blocks. Once it reaches `[*]`, the next checklist's first state blocks on the subsequent invocation.
 
+### Global checklists
+
+steplock evaluates two steplock directories: the project `.steplock/` and the global directory (`$STEPLOCK_GLOBAL_DIR`, else `$XDG_CONFIG_HOME/steplock`, else `~/.config/steplock`). Both use the same layout.
+
+- **Order** — all project checklists first, then global checklists. The first incomplete match blocks.
+- **Override** — a global checklist is skipped when the project has a checklist directory with the same name. This lets a project replace a global gate, or turn it off with an empty directory.
+- **State** — each checklist stores sessions and audit events in the directory it came from. Global session state lives in the global directory, so no files are written into projects that have no `.steplock/`.
+- **Same directory** — when the global directory resolves to the project `.steplock/` (for example, `STEPLOCK_GLOBAL_DIR=~/.steplock` and the project is `~`), it is evaluated once.
+- **`session:stop`** — cleans the session directory in both locations.
+
 ### Idempotent ack
 
 If `ack.sh` runs when the session is already complete or `current_state` is null (e.g. agent ran it twice), it exits 0 with a message and makes no writes:

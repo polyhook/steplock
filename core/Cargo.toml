@@ -82,6 +82,7 @@ unwrap_used = "deny"
 wildcard_imports = "deny"
 enum_glob_use = "deny"
 single_match_else = "deny"
+manual_let_else = "deny"
 
 [dependencies]
 cel-interpreter = "0.10"
