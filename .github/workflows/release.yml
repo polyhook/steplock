@@ -47,7 +47,8 @@ jobs:
             target: aarch64-apple-darwin
             archive: steplock-Darwin-arm64
             ext: tar.gz
-          - os: macos-13
+          # macos-13 (the last Intel runner) is retired; the arm64 runner cross-builds Intel.
+          - os: macos-latest
             target: x86_64-apple-darwin
             archive: steplock-Darwin-x86_64
             ext: tar.gz

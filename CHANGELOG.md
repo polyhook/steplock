@@ -7,7 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-09-24
+
+First published release.
+
 ### Added
+- Core gate engine: intercepts polyhook events and blocks until checklist is complete
+- Mermaid `stateDiagram-v2` parser for defining sequential checklists
+- `config.toml` schema: `on_event`, `on_tool`, `match_input` (CEL), `reset`
+- CEL expression evaluation for `match_input` (filtering by tool input fields)
+- `state.json` persistence tracking current state and visited steps per session
+- `ack.sh` helper script that advances the checklist when the operator runs it
+- Append-only JSONL audit log
+- Pre-push checklist example in `.steplock/checklists/pre-push/`
+- GitHub Actions CI: fmt, clippy, tests, doc check, release binary build
+- MIT license
 - Global checklists: `$STEPLOCK_GLOBAL_DIR`, `$XDG_CONFIG_HOME/steplock` or `~/.config/steplock` holds checklists that apply to every project; project checklists with the same name override them
 - `steplock init --global` and `steplock clean --global`; `steplock validate` also checks global checklists
 - `run_with_global` and `global_steplock_dir` library API
@@ -36,17 +50,3 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - CLI argument parsing uses `clap`: adds `steplock help`, per-command `--help`, and clearer usage errors (still exit 1)
 - Idempotent ack: re-acknowledging the current step is a no-op, not an error
-
-## [0.1.0] - Initial release
-
-### Added
-- Core gate engine: intercepts polyhook events and blocks until checklist is complete
-- Mermaid `stateDiagram-v2` parser for defining sequential checklists
-- `config.toml` schema: `on_event`, `on_tool`, `match_input` (CEL), `reset`
-- CEL expression evaluation for `match_input` (filtering by tool input fields)
-- `state.json` persistence tracking current state and visited steps per session
-- `ack.sh` helper script that advances the checklist when the operator runs it
-- Append-only JSONL audit log
-- Pre-push checklist example in `.steplock/checklists/pre-push/`
-- GitHub Actions CI: fmt, clippy, tests, doc check, release binary build
-- MIT license
