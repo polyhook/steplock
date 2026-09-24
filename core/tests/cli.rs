@@ -4,7 +4,7 @@ use std::fmt::Write as FmtWrite;
 use std::fs;
 use std::io::Write;
 use std::path::Path;
-use std::process::{Command, Stdio};
+use std::process::{Command, Output, Stdio};
 use tempfile::TempDir;
 
 const STEPLOCK: &str = env!("CARGO_BIN_EXE_steplock");
@@ -40,10 +40,11 @@ fn run_steplock(root: &Path, stdin: &str) -> (i32, String, String) {
     run_steplock_with_global(root, stdin, "")
 }
 
-/// Run the hook with `STEPLOCK_GLOBAL_DIR` set to `global` (`""` disables global checklists).
-fn run_steplock_with_global(root: &Path, stdin: &str, global: &str) -> (i32, String, String) {
+/// Run the hook in `dir` with `STEPLOCK_GLOBAL_DIR` set to `global` (`""` disables global
+/// checklists) and `stdin` as the hook event. Returns `(exit code, stdout, stderr)`.
+fn run_steplock_with_global(dir: &Path, stdin: &str, global: &str) -> (i32, String, String) {
     let mut child = Command::new(STEPLOCK)
-        .current_dir(root)
+        .current_dir(dir)
         .env("STEPLOCK_GLOBAL_DIR", global)
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
@@ -64,6 +65,16 @@ fn run_steplock_with_global(root: &Path, stdin: &str, global: &str) -> (i32, Str
         String::from_utf8_lossy(&output.stdout).into_owned(),
         String::from_utf8_lossy(&output.stderr).into_owned(),
     )
+}
+
+/// Run a `steplock` subcommand with `STEPLOCK_GLOBAL_DIR` set to `global`.
+fn run_subcommand_with_global(args: &[&str], dir: &Path, global: &Path) -> Output {
+    Command::new(STEPLOCK)
+        .args(args)
+        .current_dir(dir)
+        .env("STEPLOCK_GLOBAL_DIR", global)
+        .output()
+        .expect("failed to run steplock")
 }
 
 #[test]
@@ -208,22 +219,7 @@ fn hook_finds_steplock_dir_in_parent() {
     fs::create_dir_all(&subdir).unwrap();
     let stdin = hook_event("bash", "git push origin main", "sess1");
 
-    let mut child = Command::new(STEPLOCK)
-        .current_dir(&subdir)
-        .env("STEPLOCK_GLOBAL_DIR", "")
-        .stdin(Stdio::piped())
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
-        .spawn()
-        .unwrap();
-    child
-        .stdin
-        .take()
-        .unwrap()
-        .write_all(stdin.as_bytes())
-        .unwrap();
-    let output = child.wait_with_output().unwrap();
-    let stdout = String::from_utf8_lossy(&output.stdout);
+    let (_code, stdout, _stderr) = run_steplock(&subdir, &stdin);
     assert!(
         stdout.to_lowercase().contains("block") || stdout.contains("Did you check"),
         "should block even from subdirectory; got: {stdout}"
@@ -291,11 +287,7 @@ fn hook_ignores_global_checklist_when_disabled() {
 fn init_global_scaffolds_global_dir() {
     let global = TempDir::new().unwrap();
     let target = global.path().join("steplock");
-    let output = Command::new(STEPLOCK)
-        .args(["init", "--global"])
-        .env("STEPLOCK_GLOBAL_DIR", &target)
-        .output()
-        .expect("failed to run steplock init --global");
+    let output = run_subcommand_with_global(&["init", "--global"], global.path(), &target);
     assert!(output.status.success(), "init --global should succeed");
     assert!(
         target.join("checklists/example-gate/config.toml").exists(),
@@ -309,11 +301,8 @@ fn init_global_scaffolds_global_dir() {
 
 #[test]
 fn init_global_fails_when_disabled() {
-    let output = Command::new(STEPLOCK)
-        .args(["init", "--global"])
-        .env("STEPLOCK_GLOBAL_DIR", "")
-        .output()
-        .expect("failed to run steplock init --global");
+    let dir = TempDir::new().unwrap();
+    let output = run_subcommand_with_global(&["init", "--global"], dir.path(), Path::new(""));
     assert_eq!(
         output.status.code(),
         Some(1),
@@ -333,12 +322,7 @@ fn validate_reports_invalid_global_checklist() {
         "stateDiagram-v2\n    [*] --> s\n    s --> [*]\n    s: Step\n",
     )
     .unwrap();
-    let output = Command::new(STEPLOCK)
-        .arg("validate")
-        .current_dir(project.path())
-        .env("STEPLOCK_GLOBAL_DIR", global.path())
-        .output()
-        .expect("failed to run steplock validate");
+    let output = run_subcommand_with_global(&["validate"], project.path(), global.path());
     assert_eq!(
         output.status.code(),
         Some(1),
@@ -356,11 +340,7 @@ fn clean_global_removes_global_sessions() {
     let global = TempDir::new().unwrap();
     let session = global.path().join("sessions/s1/gate");
     fs::create_dir_all(&session).unwrap();
-    let output = Command::new(STEPLOCK)
-        .args(["clean", "--global"])
-        .env("STEPLOCK_GLOBAL_DIR", global.path())
-        .output()
-        .expect("failed to run steplock clean --global");
+    let output = run_subcommand_with_global(&["clean", "--global"], global.path(), global.path());
     assert!(output.status.success(), "clean --global should succeed");
     assert!(
         !global.path().join("sessions/s1").exists(),
