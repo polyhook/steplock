@@ -2,7 +2,7 @@
 name = "steplock"
 version = "0.1.0"
 edition = "2021"
-rust-version = "1.75"
+rust-version = "1.88"
 description = "Stateful quality gate logic for steplock"
 license = "MIT"
 repository = "https://github.com/polyhook/steplock"
@@ -87,6 +87,7 @@ single_match_else = "deny"
 manual_let_else = "deny"
 items_after_statements = "deny"
 needless_pass_by_value = "deny"
+trivially_copy_pass_by_ref = "deny"
 
 [dependencies]
 cel-interpreter = "0.10"

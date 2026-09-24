@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/polyhook/steplock/actions/workflows/ci.yml/badge.svg)](https://github.com/polyhook/steplock/actions/workflows/ci.yml)
 [![Crates.io](https://img.shields.io/crates/v/steplock.svg)](https://crates.io/crates/steplock)
-[![MSRV](https://img.shields.io/badge/rustc-1.75+-orange.svg)](https://www.rust-lang.org)
+[![MSRV](https://img.shields.io/badge/rustc-1.88+-orange.svg)](https://www.rust-lang.org)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
 **Stateful quality gates for AI coding agent actions.**
