@@ -45,7 +45,8 @@ examples/      Working reference configurations
 
 ## Making changes
 
-- **New checklist logic** — add to `core/src/run.rs`; unit tests live in the same file
+- **New checklist logic** — add to `core/src/run.rs`; unit tests live in `core/src/run_tests.rs`
+- **Unit tests** — each module `<x>.rs` keeps its unit tests in a sibling `<x>_tests.rs`, declared with `#[cfg(test)] #[path = "<x>_tests.rs"] mod tests;`. Property tests go in `<x>_proptest_tests.rs`
 - **CEL evaluation** — `core/src/cel_eval.rs`
 - **Mermaid parsing** — `core/src/flow.rs`
 - **Shell scripts** — edit `core/scripts/ack.sh`; the binary embeds it via `include_str!` so a rebuild picks up your changes
