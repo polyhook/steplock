@@ -4,7 +4,7 @@ use std::fmt::Write as FmtWrite;
 use std::fs;
 use std::io::Write;
 use std::path::Path;
-use std::process::{Command, Stdio};
+use std::process::{Command, Output, Stdio};
 use tempfile::TempDir;
 
 const STEPLOCK: &str = env!("CARGO_BIN_EXE_steplock");
@@ -37,8 +37,15 @@ fn checklist(root: &Path, on_event: &str, on_tool: &str, match_input: Option<&st
 }
 
 fn run_steplock(root: &Path, stdin: &str) -> (i32, String, String) {
+    run_steplock_with_global(root, stdin, "")
+}
+
+/// Run the hook in `dir` with `STEPLOCK_GLOBAL_DIR` set to `global` (`""` disables global
+/// checklists) and `stdin` as the hook event. Returns `(exit code, stdout, stderr)`.
+fn run_steplock_with_global(dir: &Path, stdin: &str, global: &str) -> (i32, String, String) {
     let mut child = Command::new(STEPLOCK)
-        .current_dir(root)
+        .current_dir(dir)
+        .env("STEPLOCK_GLOBAL_DIR", global)
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
@@ -58,6 +65,16 @@ fn run_steplock(root: &Path, stdin: &str) -> (i32, String, String) {
         String::from_utf8_lossy(&output.stdout).into_owned(),
         String::from_utf8_lossy(&output.stderr).into_owned(),
     )
+}
+
+/// Run a `steplock` subcommand with `STEPLOCK_GLOBAL_DIR` set to `global`.
+fn run_subcommand_with_global(args: &[&str], dir: &Path, global: &Path) -> Output {
+    Command::new(STEPLOCK)
+        .args(args)
+        .current_dir(dir)
+        .env("STEPLOCK_GLOBAL_DIR", global)
+        .output()
+        .expect("failed to run steplock")
 }
 
 #[test]
@@ -202,23 +219,131 @@ fn hook_finds_steplock_dir_in_parent() {
     fs::create_dir_all(&subdir).unwrap();
     let stdin = hook_event("bash", "git push origin main", "sess1");
 
-    let mut child = Command::new(STEPLOCK)
-        .current_dir(&subdir)
-        .stdin(Stdio::piped())
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
-        .spawn()
-        .unwrap();
-    child
-        .stdin
-        .take()
-        .unwrap()
-        .write_all(stdin.as_bytes())
-        .unwrap();
-    let output = child.wait_with_output().unwrap();
-    let stdout = String::from_utf8_lossy(&output.stdout);
+    let (_code, stdout, _stderr) = run_steplock(&subdir, &stdin);
     assert!(
         stdout.to_lowercase().contains("block") || stdout.contains("Did you check"),
         "should block even from subdirectory; got: {stdout}"
+    );
+}
+
+// ── Global checklists ──────────────────────────────────────────────────────
+
+/// Write a `git push` checklist named `name` into `steplock_dir/checklists/`.
+fn global_checklist(steplock_dir: &Path, name: &str, question: &str) {
+    let dir = steplock_dir.join("checklists").join(name);
+    fs::create_dir_all(&dir).unwrap();
+    fs::write(
+        dir.join("config.toml"),
+        "on_event = \"tool:before\"\non_tool = \"bash\"\nmatch_input = \"input.command.contains('git push')\"\n",
+    )
+    .unwrap();
+    fs::write(
+        dir.join("flow.mmd"),
+        format!("stateDiagram-v2\n    [*] --> q\n    q --> [*]\n    q: {question}\n"),
+    )
+    .unwrap();
+}
+
+#[test]
+fn hook_blocks_with_global_checklist_in_project_without_steplock() {
+    let project = TempDir::new().unwrap();
+    let global = TempDir::new().unwrap();
+    global_checklist(global.path(), "push-gate", "Global push question?");
+
+    let stdin = hook_event("bash", "git push origin main", "sess-g");
+    let (code, stdout, _stderr) =
+        run_steplock_with_global(project.path(), &stdin, global.path().to_str().unwrap());
+    assert_eq!(code, 0, "block response exits 0");
+    assert!(
+        stdout.contains("Global push question?"),
+        "expected global checklist block, got: {stdout}"
+    );
+    assert!(
+        global
+            .path()
+            .join("sessions/sess-g/push-gate/state.json")
+            .exists(),
+        "global session state must live in the global dir"
+    );
+    assert!(
+        !project.path().join(".steplock").exists(),
+        "project dir must stay untouched"
+    );
+}
+
+#[test]
+fn hook_ignores_global_checklist_when_disabled() {
+    let project = TempDir::new().unwrap();
+    let stdin = hook_event("bash", "git push origin main", "sess-g");
+    let (code, stdout, _stderr) = run_steplock_with_global(project.path(), &stdin, "");
+    assert_eq!(code, 0, "approve exits 0");
+    assert!(
+        stdout.trim() == "{}" || stdout.is_empty(),
+        "expected approve, got: {stdout}"
+    );
+}
+
+#[test]
+fn init_global_scaffolds_global_dir() {
+    let global = TempDir::new().unwrap();
+    let target = global.path().join("steplock");
+    let output = run_subcommand_with_global(&["init", "--global"], global.path(), &target);
+    assert!(output.status.success(), "init --global should succeed");
+    assert!(
+        target.join("checklists/example-gate/config.toml").exists(),
+        "sample checklist expected in global dir"
+    );
+    assert!(
+        !target.join(".gitignore").exists(),
+        "global dir is not a repo; no .gitignore"
+    );
+}
+
+#[test]
+fn init_global_fails_when_disabled() {
+    let dir = TempDir::new().unwrap();
+    let output = run_subcommand_with_global(&["init", "--global"], dir.path(), Path::new(""));
+    assert_eq!(
+        output.status.code(),
+        Some(1),
+        "disabled global dir must fail"
+    );
+}
+
+#[test]
+fn validate_reports_invalid_global_checklist() {
+    let project = TempDir::new().unwrap();
+    let global = TempDir::new().unwrap();
+    let bad = global.path().join("checklists/bad");
+    fs::create_dir_all(&bad).unwrap();
+    fs::write(bad.join("config.toml"), "not valid toml").unwrap();
+    fs::write(
+        bad.join("flow.mmd"),
+        "stateDiagram-v2\n    [*] --> s\n    s --> [*]\n    s: Step\n",
+    )
+    .unwrap();
+    let output = run_subcommand_with_global(&["validate"], project.path(), global.path());
+    assert_eq!(
+        output.status.code(),
+        Some(1),
+        "invalid global checklist fails"
+    );
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(
+        stderr.contains("[global:bad/config.toml]"),
+        "error label must name the global checklist, got: {stderr}"
+    );
+}
+
+#[test]
+fn clean_global_removes_global_sessions() {
+    let global = TempDir::new().unwrap();
+    let session = global.path().join("sessions/s1/gate");
+    fs::create_dir_all(&session).unwrap();
+    let output = run_subcommand_with_global(&["clean", "--global"], global.path(), global.path());
+    assert!(output.status.success(), "clean --global should succeed");
+    assert!(
+        !global.path().join("sessions/s1").exists(),
+        "global session dir must be removed"
     );
 }

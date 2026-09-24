@@ -8,7 +8,7 @@ use std::path::{Path, PathBuf};
 use std::process;
 
 use polyhook::parse;
-use steplock::{run, HookEvent, HookResponse};
+use steplock::{global_steplock_dir, run_with_global, HookEvent, HookResponse};
 
 fn main() {
     let args: Vec<String> = env::args().skip(1).collect();
@@ -26,10 +26,16 @@ fn main() {
                 process::exit(1);
             }
         }
+        [cmd, flag] if cmd == "init" && flag == "--global" => {
+            if let Err(e) = init_steplock_dir(&require_global_dir(), false) {
+                eprintln!("steplock: init failed: {e}");
+                process::exit(1);
+            }
+        }
         [cmd] if cmd == "validate" => {
             let dir = env::current_dir().unwrap_or_else(|_| PathBuf::from("."));
             let root = find_repo_root_from(&dir).unwrap_or(dir);
-            match run_validate(&root) {
+            match run_validate(&root, global_steplock_dir().as_deref()) {
                 Ok(true) => {}
                 Ok(false) => process::exit(1),
                 Err(e) => {
@@ -40,6 +46,12 @@ fn main() {
         }
         [cmd] if cmd == "clean" => {
             if let Err(e) = run_clean(&env::current_dir().unwrap_or_else(|_| PathBuf::from("."))) {
+                eprintln!("steplock: clean failed: {e}");
+                process::exit(1);
+            }
+        }
+        [cmd, flag] if cmd == "clean" && flag == "--global" => {
+            if let Err(e) = clean_sessions(&require_global_dir()) {
                 eprintln!("steplock: clean failed: {e}");
                 process::exit(1);
             }
@@ -62,45 +74,82 @@ Stateful quality gate for AI coding agents.
 USAGE:
     steplock               Read hook event from stdin and respond (used by polyhook)
     steplock init          Create .steplock/checklists/ in the current directory
-    steplock validate      Check all checklist configs for errors
+    steplock init --global Create checklists/ in the global steplock directory
+    steplock validate      Check all project and global checklist configs for errors
     steplock clean         Remove all session state (forces checklists to restart)
+    steplock clean --global
+                           Remove all session state in the global steplock directory
     steplock --version     Print version
 
 CHECKLIST FILES:
     .steplock/checklists/<name>/config.toml   Gate trigger and reset configuration
     .steplock/checklists/<name>/flow.mmd      Mermaid stateDiagram-v2 checklist flow
 
+GLOBAL CHECKLISTS:
+    Checklists in <global>/checklists/<name>/ apply to every project. They run after
+    the project checklists. A project checklist with the same name replaces the global one.
+    <global> is $STEPLOCK_GLOBAL_DIR, else $XDG_CONFIG_HOME/steplock, else
+    ~/.config/steplock. Set STEPLOCK_GLOBAL_DIR=\"\" to turn global checklists off.
+
 For more information: https://github.com/polyhook/steplock",
         env!("CARGO_PKG_VERSION")
     );
 }
 
-/// Validate all checklists in `.steplock/checklists/`. Returns `Ok(true)` if all valid,
-/// `Ok(false)` if any checklist failed validation (errors already printed), or `Err` on I/O.
-fn run_validate(repo_root: &Path) -> io::Result<bool> {
-    let checklists_dir = repo_root.join(".steplock").join("checklists");
+/// Validate all checklists in `.steplock/checklists/` and in the global steplock directory.
+/// Returns `Ok(true)` if all valid, `Ok(false)` if any checklist failed validation (errors
+/// already printed), or `Err` on I/O.
+fn run_validate(repo_root: &Path, global_dir: Option<&Path>) -> io::Result<bool> {
+    let project_ok = validate_dir(&repo_root.join(".steplock").join("checklists"), "")?;
+    let global_ok = match global_dir {
+        Some(global) => validate_dir(&global.join("checklists"), "global")?,
+        None => true,
+    };
+    Ok(project_ok && global_ok)
+}
+
+/// Validate one `checklists/` directory. `scope` names it in messages (`""` or `"global"`).
+fn validate_dir(checklists_dir: &Path, scope: &str) -> io::Result<bool> {
+    let shown = checklists_dir.display();
+    let (words, label_prefix) = if scope.is_empty() {
+        (String::new(), String::new())
+    } else {
+        (format!("{scope} "), format!("{scope}:"))
+    };
     if !checklists_dir.exists() {
-        println!("steplock: no .steplock/checklists/ found");
+        println!("steplock: no {words}checklists found at {shown}");
         return Ok(true);
     }
 
-    let errors = steplock::validate_checklists(&checklists_dir);
+    let errors = steplock::validate_checklists(checklists_dir);
     if errors.is_empty() {
-        println!("steplock: all checklists valid");
+        println!("steplock: all {words}checklists valid ({shown})");
         Ok(true)
     } else {
         for (label, err) in &errors {
-            eprintln!("steplock: [{label}] error: {err}");
+            eprintln!("steplock: [{label_prefix}{label}] error: {err}");
         }
         Ok(false)
     }
+}
+
+/// Global steplock directory, or exit with an error when it is disabled or unknown.
+fn require_global_dir() -> PathBuf {
+    global_steplock_dir().unwrap_or_else(|| {
+        eprintln!(
+            "steplock: no global steplock directory \
+             (set STEPLOCK_GLOBAL_DIR, XDG_CONFIG_HOME or HOME)"
+        );
+        process::exit(1);
+    })
 }
 
 fn run_hook() {
     let cwd = env::current_dir().unwrap_or_else(|_| PathBuf::from("."));
     let repo_root = find_repo_root_from(&cwd).unwrap_or(cwd);
 
-    let response = match run_app(io::stdin(), &repo_root) {
+    let global_dir = global_steplock_dir();
+    let response = match run_app(io::stdin(), &repo_root, global_dir.as_deref()) {
         Ok(r) => r,
         Err(e) => {
             eprintln!("{e}");
@@ -125,22 +174,30 @@ const SAMPLE_FLOW: &str = "stateDiagram-v2\n    [*] --> tests_pass\n    tests_pa
 /// Create `.steplock/checklists/` and a `.steplock/.gitignore` in `dir`.
 /// Also writes a ready-to-use sample checklist so `git push` is blocked immediately.
 fn run_init(dir: &Path) -> io::Result<()> {
-    let checklists_dir = dir.join(".steplock").join("checklists");
+    init_steplock_dir(&dir.join(".steplock"), true)
+}
+
+/// Create `checklists/` with a sample checklist in `steplock_dir`.
+/// With `gitignore`, also writes a `.gitignore` for session state and the audit log.
+fn init_steplock_dir(steplock_dir: &Path, gitignore: bool) -> io::Result<()> {
+    let checklists_dir = steplock_dir.join("checklists");
     if checklists_dir.exists() {
-        println!("steplock: .steplock/checklists/ already exists");
+        println!("steplock: {} already exists", checklists_dir.display());
         return Ok(());
     }
     fs::create_dir_all(&checklists_dir)?;
-    fs::write(
-        dir.join(".steplock").join(".gitignore"),
-        "sessions/\naudit.log\n",
-    )?;
+    if gitignore {
+        fs::write(steplock_dir.join(".gitignore"), "sessions/\naudit.log\n")?;
+    }
     let sample_dir = checklists_dir.join("example-gate");
     fs::create_dir_all(&sample_dir)?;
     fs::write(sample_dir.join("config.toml"), SAMPLE_CONFIG)?;
     fs::write(sample_dir.join("flow.mmd"), SAMPLE_FLOW)?;
-    println!("steplock: initialized .steplock/checklists/");
-    println!("A sample checklist was written to .steplock/checklists/example-gate/.");
+    println!("steplock: initialized {}", checklists_dir.display());
+    println!(
+        "A sample checklist was written to {}.",
+        sample_dir.display()
+    );
     println!("It will block `git push` until two quality checks are acknowledged.");
     println!("Edit config.toml and flow.mmd to customize it, or add more checklists.");
     Ok(())
@@ -156,7 +213,11 @@ fn run_clean(dir: &Path) -> io::Result<()> {
         println!("steplock: no .steplock/ directory found — nothing to clean");
         return Ok(());
     };
-    let steplock_dir = root.join(".steplock");
+    clean_sessions(&root.join(".steplock"))
+}
+
+/// Remove every session directory and the fallback id under `<steplock_dir>/sessions/`.
+fn clean_sessions(steplock_dir: &Path) -> io::Result<()> {
     let sessions_dir = steplock_dir.join("sessions");
     if !sessions_dir.exists() {
         println!("steplock: no sessions to clean");
@@ -182,7 +243,11 @@ fn run_clean(dir: &Path) -> io::Result<()> {
 
 /// Parse the hook event from `reader`, run the gate, and return the polyhook response.
 /// Returns `Err(message)` when input is unreadable or the gate engine fails.
-fn run_app(mut reader: impl Read, repo_root: &Path) -> Result<polyhook::HookResponse, String> {
+fn run_app(
+    mut reader: impl Read,
+    repo_root: &Path,
+    global_dir: Option<&Path>,
+) -> Result<polyhook::HookResponse, String> {
     let mut bytes = Vec::new();
     reader
         .read_to_end(&mut bytes)
@@ -193,7 +258,7 @@ fn run_app(mut reader: impl Read, repo_root: &Path) -> Result<polyhook::HookResp
 
     let event = polyhook_to_hook_event(ph_event);
 
-    match run(&event, repo_root) {
+    match run_with_global(&event, repo_root, global_dir) {
         Ok(HookResponse::Block { message }) => Ok(polyhook::HookResponse::block(&message)),
         Ok(_) => Ok(polyhook::HookResponse::approve()),
         Err(e) => Err(format!("steplock: error: {e}")),
@@ -287,7 +352,7 @@ reset = "session"
         let tmp = TempDir::new().unwrap();
         setup_checklist(tmp.path());
         let stdin = claude_stdin("ls -la", "s1");
-        let resp = run_app(stdin.as_bytes(), tmp.path()).unwrap();
+        let resp = run_app(stdin.as_bytes(), tmp.path(), None).unwrap();
         assert!(matches!(resp, polyhook::HookResponse::ApproveResponse(_)));
     }
 
@@ -296,14 +361,14 @@ reset = "session"
         let tmp = TempDir::new().unwrap();
         setup_checklist(tmp.path());
         let stdin = claude_stdin("git push origin main", "s1");
-        let resp = run_app(stdin.as_bytes(), tmp.path()).unwrap();
+        let resp = run_app(stdin.as_bytes(), tmp.path(), None).unwrap();
         assert!(matches!(resp, polyhook::HookResponse::BlockResponse(_)));
     }
 
     #[test]
     fn run_app_error_on_invalid_input() {
         let tmp = TempDir::new().unwrap();
-        let err = run_app(b"not valid json".as_ref(), tmp.path());
+        let err = run_app(b"not valid json".as_ref(), tmp.path(), None);
         assert!(err.is_err());
         assert!(err
             .unwrap_err()
@@ -330,7 +395,7 @@ reset = "session"
         )
         .unwrap();
         let stdin = claude_stdin("anything", "s1");
-        let err = run_app(stdin.as_bytes(), tmp.path());
+        let err = run_app(stdin.as_bytes(), tmp.path(), None);
         assert!(err.is_err());
         assert!(err.unwrap_err().contains("steplock: error:"));
     }
@@ -388,7 +453,7 @@ reset = "session"
         let tmp = TempDir::new().unwrap();
         run_init(tmp.path()).unwrap();
         let stdin = claude_stdin("git push origin main", "s1");
-        let resp = run_app(stdin.as_bytes(), tmp.path()).unwrap();
+        let resp = run_app(stdin.as_bytes(), tmp.path(), None).unwrap();
         assert!(matches!(resp, polyhook::HookResponse::BlockResponse(_)));
     }
 
@@ -444,21 +509,21 @@ reset = "session"
     #[test]
     fn validate_returns_true_when_no_checklists_dir() {
         let tmp = TempDir::new().unwrap();
-        assert!(run_validate(tmp.path()).unwrap());
+        assert!(run_validate(tmp.path(), None).unwrap());
     }
 
     #[test]
     fn validate_returns_true_when_checklists_empty() {
         let tmp = TempDir::new().unwrap();
         fs::create_dir_all(tmp.path().join(".steplock/checklists")).unwrap();
-        assert!(run_validate(tmp.path()).unwrap());
+        assert!(run_validate(tmp.path(), None).unwrap());
     }
 
     #[test]
     fn validate_returns_true_for_valid_checklist() {
         let tmp = TempDir::new().unwrap();
         setup_checklist(tmp.path());
-        assert!(run_validate(tmp.path()).unwrap());
+        assert!(run_validate(tmp.path(), None).unwrap());
     }
 
     #[test]
@@ -471,7 +536,7 @@ reset = "session"
             "stateDiagram-v2\n    [*] --> s\n    s --> [*]\n    s: Step\n",
         )
         .unwrap();
-        assert!(!run_validate(tmp.path()).unwrap());
+        assert!(!run_validate(tmp.path(), None).unwrap());
     }
 
     #[test]
@@ -484,7 +549,7 @@ reset = "session"
             "on_event = \"tool:before\"\nreset = \"session\"\n",
         )
         .unwrap();
-        assert!(!run_validate(tmp.path()).unwrap());
+        assert!(!run_validate(tmp.path(), None).unwrap());
     }
 
     #[test]
@@ -498,7 +563,7 @@ reset = "session"
             "stateDiagram-v2\n    [*] --> s\n    s --> [*]\n    s: Step\n",
         )
         .unwrap();
-        assert!(!run_validate(tmp.path()).unwrap());
+        assert!(!run_validate(tmp.path(), None).unwrap());
     }
 
     #[test]
@@ -512,7 +577,7 @@ reset = "session"
         )
         .unwrap();
         fs::write(cl_dir.join("flow.mmd"), "stateDiagram-v2\n    a --> b\n").unwrap();
-        assert!(!run_validate(tmp.path()).unwrap());
+        assert!(!run_validate(tmp.path(), None).unwrap());
     }
 
     #[test]
@@ -527,6 +592,6 @@ reset = "session"
             "stateDiagram-v2\n    [*] --> s\n    s --> [*]\n    s: Step\n",
         )
         .unwrap();
-        assert!(!run_validate(tmp.path()).unwrap());
+        assert!(!run_validate(tmp.path(), None).unwrap());
     }
 }

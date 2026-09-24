@@ -149,6 +149,8 @@ In your project's `.claude/settings.json`:
 }
 ```
 
+To gate every project, put the same block in `~/.claude/settings.json` and add your checklists to the global steplock directory (see [Global checklists](#global-checklists)).
+
 ### Cursor / Windsurf / Cline / Amp
 
 Follow your tool's hook registration docs and point the hook command at `steplock`. polyhook normalises the event format — no per-tool changes needed.
@@ -174,11 +176,25 @@ cat .steplock/audit.log
 
 ---
 
+## Global checklists
+
+Global checklists apply to every project. Create the global steplock directory with a sample checklist:
+
+```sh
+steplock init --global
+# steplock: initialized /Users/you/.config/steplock/checklists
+```
+
+The directory is `$STEPLOCK_GLOBAL_DIR`, else `$XDG_CONFIG_HOME/steplock`, else `~/.config/steplock`. Project checklists run first. A project checklist with the same name replaces the global one. Set `STEPLOCK_GLOBAL_DIR=""` to turn global checklists off.
+
+---
+
 ## Other commands
 
 ```sh
-steplock validate  # check every config.toml / flow.mmd under .steplock/checklists/ for errors
-steplock clean      # remove all session state under .steplock/sessions/ (checklists restart fresh)
+steplock validate        # check every config.toml / flow.mmd in .steplock/checklists/ and the global checklists/
+steplock clean           # remove all session state under .steplock/sessions/ (checklists restart fresh)
+steplock clean --global  # remove all session state in the global steplock directory
 ```
 
 ---
