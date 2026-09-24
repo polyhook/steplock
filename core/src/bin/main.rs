@@ -7,79 +7,13 @@ use std::io::{self, Read};
 use std::path::{Path, PathBuf};
 use std::process;
 
+use clap::{Parser, Subcommand};
 use polyhook::parse;
 use steplock::{global_steplock_dir, run_with_global, HookEvent, HookResponse};
 
-fn main() {
-    let args: Vec<String> = env::args().skip(1).collect();
-    match args.as_slice() {
-        [flag] if flag == "--version" || flag == "-V" => {
-            println!("steplock {}", env!("CARGO_PKG_VERSION"));
-        }
-        [flag] if flag == "--help" || flag == "-h" => {
-            print_help();
-        }
-        [cmd] if cmd == "init" => {
-            let cwd = env::current_dir().unwrap_or_else(|_| PathBuf::from("."));
-            if let Err(e) = run_init(&cwd) {
-                eprintln!("steplock: init failed: {e}");
-                process::exit(1);
-            }
-        }
-        [cmd, flag] if cmd == "init" && flag == "--global" => {
-            if let Err(e) = init_steplock_dir(&require_global_dir(), false) {
-                eprintln!("steplock: init failed: {e}");
-                process::exit(1);
-            }
-        }
-        [cmd] if cmd == "validate" => {
-            let dir = env::current_dir().unwrap_or_else(|_| PathBuf::from("."));
-            let root = find_repo_root_from(&dir).unwrap_or(dir);
-            match run_validate(&root, global_steplock_dir().as_deref()) {
-                Ok(true) => {}
-                Ok(false) => process::exit(1),
-                Err(e) => {
-                    eprintln!("steplock: validate failed: {e}");
-                    process::exit(1);
-                }
-            }
-        }
-        [cmd] if cmd == "clean" => {
-            if let Err(e) = run_clean(&env::current_dir().unwrap_or_else(|_| PathBuf::from("."))) {
-                eprintln!("steplock: clean failed: {e}");
-                process::exit(1);
-            }
-        }
-        [cmd, flag] if cmd == "clean" && flag == "--global" => {
-            if let Err(e) = clean_sessions(&require_global_dir()) {
-                eprintln!("steplock: clean failed: {e}");
-                process::exit(1);
-            }
-        }
-        [] => run_hook(),
-        _ => {
-            eprintln!("steplock: unknown arguments");
-            eprintln!("Run 'steplock --help' for usage.");
-            process::exit(1);
-        }
-    }
-}
-
-fn print_help() {
-    println!(
-        "steplock {}
-
-Stateful quality gate for AI coding agents.
-
-USAGE:
-    steplock               Read hook event from stdin and respond (used by polyhook)
-    steplock init          Create .steplock/checklists/ in the current directory
-    steplock init --global Create checklists/ in the global steplock directory
-    steplock validate      Check all project and global checklist configs for errors
-    steplock clean         Remove all session state (forces checklists to restart)
-    steplock clean --global
-                           Remove all session state in the global steplock directory
-    steplock --version     Print version
+/// Extra help text shown after the generated command list.
+const AFTER_HELP: &str = "\
+With no command, steplock reads a hook event from stdin and responds (used by polyhook).
 
 CHECKLIST FILES:
     .steplock/checklists/<name>/config.toml   Gate trigger and reset configuration
@@ -91,9 +25,81 @@ GLOBAL CHECKLISTS:
     <global> is $STEPLOCK_GLOBAL_DIR, else $XDG_CONFIG_HOME/steplock, else
     ~/.config/steplock. Set STEPLOCK_GLOBAL_DIR=\"\" to turn global checklists off.
 
-For more information: https://github.com/polyhook/steplock",
-        env!("CARGO_PKG_VERSION")
-    );
+For more information: https://github.com/polyhook/steplock";
+
+/// Stateful quality gate for AI coding agents.
+#[derive(Debug, Parser)]
+#[command(name = "steplock", version, after_help = AFTER_HELP)]
+struct Cli {
+    /// Command to run. Omit it to handle a hook event from stdin.
+    #[command(subcommand)]
+    command: Option<CliCommand>,
+}
+
+/// `steplock` subcommands.
+#[derive(Debug, Subcommand)]
+enum CliCommand {
+    /// Create .steplock/checklists/ with a sample checklist in the current directory
+    Init {
+        /// Create checklists/ in the global steplock directory instead
+        #[arg(long)]
+        global: bool,
+    },
+    /// Check all project and global checklist configs for errors
+    Validate,
+    /// Remove all session state (forces checklists to restart)
+    Clean {
+        /// Remove session state in the global steplock directory instead
+        #[arg(long)]
+        global: bool,
+    },
+}
+
+fn main() {
+    let cli = Cli::try_parse().unwrap_or_else(|e| {
+        // Help and version go to stdout and exit 0; usage errors exit 1 (not clap's 2,
+        // which steplock reserves for hook failures).
+        let code = i32::from(e.use_stderr());
+        let _: io::Result<()> = e.print();
+        process::exit(code);
+    });
+    match cli.command {
+        None => run_hook(),
+        Some(CliCommand::Init { global: false }) => {
+            let cwd = env::current_dir().unwrap_or_else(|_| PathBuf::from("."));
+            exit_on_error("init", run_init(&cwd));
+        }
+        Some(CliCommand::Init { global: true }) => {
+            exit_on_error("init", init_steplock_dir(&require_global_dir(), false));
+        }
+        Some(CliCommand::Validate) => {
+            let dir = env::current_dir().unwrap_or_else(|_| PathBuf::from("."));
+            let root = find_repo_root_from(&dir).unwrap_or(dir);
+            match run_validate(&root, global_steplock_dir().as_deref()) {
+                Ok(true) => {}
+                Ok(false) => process::exit(1),
+                Err(e) => {
+                    eprintln!("steplock: validate failed: {e}");
+                    process::exit(1);
+                }
+            }
+        }
+        Some(CliCommand::Clean { global: false }) => {
+            let cwd = env::current_dir().unwrap_or_else(|_| PathBuf::from("."));
+            exit_on_error("clean", run_clean(&cwd));
+        }
+        Some(CliCommand::Clean { global: true }) => {
+            exit_on_error("clean", clean_sessions(&require_global_dir()));
+        }
+    }
+}
+
+/// Print `steplock: <command> failed: <error>` and exit 1 when `result` is an error.
+fn exit_on_error(command: &str, result: io::Result<()>) {
+    if let Err(e) = result {
+        eprintln!("steplock: {command} failed: {e}");
+        process::exit(1);
+    }
 }
 
 /// Validate all checklists in `.steplock/checklists/` and in the global steplock directory.

@@ -86,9 +86,11 @@ enum_glob_use = "deny"
 single_match_else = "deny"
 manual_let_else = "deny"
 items_after_statements = "deny"
+needless_pass_by_value = "deny"
 
 [dependencies]
 cel-interpreter = "0.10"
+clap = { version = "4.5", features = ["derive"] }
 chrono = { version = "0.4", features = ["serde"] }
 dirs = "6"
 polyhook = "0.1.5"

@@ -31,6 +31,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Session cleanup uses correct scope key when `session_id` is empty
 
 ### Changed
+- CLI argument parsing uses `clap`: adds `steplock help`, per-command `--help`, and clearer usage errors (still exit 1)
 - Idempotent ack: re-acknowledging the current step is a no-op, not an error
 
 ## [0.1.0] - Initial release
