@@ -149,7 +149,36 @@ In your project's `.claude/settings.json`:
 }
 ```
 
-To gate every project, put the same block in `~/.claude/settings.json` and add your checklists to the global steplock directory (see [Global checklists](#global-checklists)).
+To gate every project, put the same block in `~/.claude/settings.json` and add your checklists to the global steplock directory (see [Global checklists](#global-checklists)). The same global checklists apply to every agent you register the hook in, such as [Hermes Agent](#hermes-agent).
+
+### Hermes Agent
+
+In `~/.hermes/config.yaml`:
+
+```yaml
+hooks:
+  pre_tool_call:
+    - matcher: "terminal"
+      command: "steplock"
+      timeout: 10
+  on_session_end:
+    - command: "steplock"
+      timeout: 10
+```
+
+- `pre_tool_call` with `matcher: "terminal"` gates shell commands. polyhook maps Hermes `terminal` to `bash`, so checklists with `on_tool = "bash"` work unchanged.
+- `on_session_end` removes the session state when the Hermes session ends.
+- steplock answers in Hermes's own format (`{"action": "block", "message": ...}`).
+- Hermes asks once to approve each new hook command. In non-interactive contexts (gateway, cron), set `hooks_auto_accept: true` or `HERMES_ACCEPT_HOOKS=1`. Restart Hermes after changing hooks.
+- Check the setup with `hermes hooks doctor`, then fire it with a test payload:
+
+  ```sh
+  echo '{"args": {"command": "git push origin main"}, "session_id": "check"}' > /tmp/push.json
+  hermes hooks test pre_tool_call --for-tool terminal --payload-file /tmp/push.json
+  # parsed (Hermes wire shape): {"action": "block", "message": "[example-gate: 1/2] ..."}
+  ```
+
+Hermes runs hooks in the directory where Hermes started, not in the terminal tool's working directory. Global checklists do not depend on this. A project `.steplock/` is found only when Hermes was started inside that project.
 
 ### Cursor / Windsurf / Cline / Amp
 

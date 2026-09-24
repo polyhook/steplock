@@ -127,7 +127,9 @@ Rules:
 - A project checklist with the same directory name replaces the global one. An empty `.steplock/checklists/<name>/` directory turns that global checklist off for the project.
 - Session state and the audit log for global checklists are written to the global directory, not to the project.
 
-Run `steplock init --global` to create the directory with a sample checklist. Register the hook once in your user-level tool settings (for Claude Code, `~/.claude/settings.json`) so it runs in every project.
+Run `steplock init --global` to create the directory with a sample checklist. Register the hook once in each agent's user-level settings so it runs in every project: `~/.claude/settings.json` for Claude Code, `~/.hermes/config.yaml` for Hermes Agent (see [Installation](Installation.md#hermes-agent)). Every agent reads the same global directory, so one checklist gates all of them.
+
+Some agents give hooks a sandboxed `HOME`. Hermes Agent does this in containers and with `TERMINAL_HOME_MODE=profile`, and exports the real home as `HERMES_REAL_HOME`. steplock uses that real home, so the global directory stays the same. To pin it explicitly, set `STEPLOCK_GLOBAL_DIR`.
 
 ---
 

@@ -27,6 +27,7 @@ missing_copy_implementations = "deny"
 # least one more (see .steplock/checklists/pre-push).
 [lints.clippy]
 dbg_macro = "deny"
+map_flatten = "deny"
 todo = "deny"
 unimplemented = "deny"
 manual_string_new = "deny"

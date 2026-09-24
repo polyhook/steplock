@@ -1,6 +1,7 @@
 //! Unit tests for `main`.
 use super::*;
 use clap::CommandFactory;
+use polyhook::parse;
 use std::fs;
 use std::iter;
 use tempfile::TempDir;
@@ -364,4 +365,115 @@ fn cli_help_and_version_are_not_errors() {
 #[test]
 fn cli_definition_is_valid() {
     Cli::command().debug_assert();
+}
+
+fn hermes_stdin(cmd: &str, session: &str) -> String {
+    serde_json::json!({
+        "hook_event_name": "pre_tool_call",
+        "tool_name": "terminal",
+        "tool_input": { "command": cmd },
+        "session_id": session,
+        "cwd": "/tmp/project",
+        "extra": { "task_id": "t1", "tool_call_id": "c1" }
+    })
+    .to_string()
+}
+
+/// Serialize through the same path `run_hook` uses, so the assertion covers the caller
+/// context that `run_app` records while reading stdin.
+fn respond_json(resp: &polyhook::HookResponse) -> serde_json::Value {
+    let mut buf = Vec::new();
+    polyhook::respond_to(&mut buf, resp).unwrap();
+    serde_json::from_slice(&buf).unwrap()
+}
+
+#[test]
+fn claude_code_block_denies_the_tool_call_not_the_session() {
+    let tmp = TempDir::new().unwrap();
+    setup_checklist(tmp.path());
+    let stdin = claude_stdin("git push origin main", "s1");
+    let json = respond_json(&run_app(stdin.as_bytes(), tmp.path(), None).unwrap());
+    assert!(
+        json.get("decision").is_none(),
+        "legacy session-level block: {json}"
+    );
+    let decision = json
+        .get("hookSpecificOutput")
+        .and_then(|o| o.get("permissionDecision"))
+        .and_then(serde_json::Value::as_str);
+    assert_eq!(
+        decision,
+        Some("deny"),
+        "expected PreToolUse deny, got {json}"
+    );
+}
+
+#[test]
+fn hermes_terminal_command_blocks_in_hermes_format() {
+    let tmp = TempDir::new().unwrap();
+    setup_checklist(tmp.path());
+    let stdin = hermes_stdin("git push origin main", "hermes-s1");
+    let json = respond_json(&run_app(stdin.as_bytes(), tmp.path(), None).unwrap());
+    assert_eq!(
+        json.get("action").and_then(serde_json::Value::as_str),
+        Some("block"),
+        "expected Hermes block, got {json}"
+    );
+    let message = json
+        .get("message")
+        .and_then(serde_json::Value::as_str)
+        .unwrap_or_default();
+    assert!(
+        message.contains("ack.sh"),
+        "block message must carry the ack command: {json}"
+    );
+    assert!(
+        tmp.path()
+            .join(".steplock/sessions/hermes-s1/quality-gate/state.json")
+            .exists(),
+        "Hermes session_id must scope the session state"
+    );
+}
+
+#[test]
+fn hermes_non_matching_command_approves() {
+    let tmp = TempDir::new().unwrap();
+    setup_checklist(tmp.path());
+    let stdin = hermes_stdin("ls -la", "hermes-s1");
+    let json = respond_json(&run_app(stdin.as_bytes(), tmp.path(), None).unwrap());
+    assert_eq!(
+        json,
+        serde_json::json!({}),
+        "Hermes approve is an empty object"
+    );
+}
+
+#[test]
+fn hermes_session_end_cleans_global_session() {
+    let project = TempDir::new().unwrap();
+    let global = TempDir::new().unwrap();
+    setup_checklist(global.path().join("x").as_path());
+    // Global dir layout is `<global>/checklists/`, so move the sample under it.
+    fs::rename(global.path().join("x/.steplock"), global.path().join("g")).unwrap();
+    let global_dir = global.path().join("g");
+
+    let push = hermes_stdin("git push", "hermes-s2");
+    run_app(push.as_bytes(), project.path(), Some(&global_dir)).unwrap();
+    assert!(
+        global_dir.join("sessions/hermes-s2").exists(),
+        "global session created"
+    );
+
+    let end = serde_json::json!({
+        "hook_event_name": "on_session_end",
+        "session_id": "hermes-s2",
+        "cwd": "/tmp/project",
+        "extra": {}
+    })
+    .to_string();
+    run_app(end.as_bytes(), project.path(), Some(&global_dir)).unwrap();
+    assert!(
+        !global_dir.join("sessions/hermes-s2").exists(),
+        "on_session_end must clean the global session"
+    );
 }

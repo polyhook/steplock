@@ -81,3 +81,41 @@ fn none_without_home() {
         "no env and no home means no global dir"
     );
 }
+
+#[test]
+fn prefers_agent_real_home_over_sandboxed_home() {
+    let dir = resolve_global_dir(
+        lookup(&[("HERMES_REAL_HOME", abs("real").into())]),
+        Some(abs("profile-home")),
+    );
+    assert_eq!(
+        dir,
+        Some(home_config("real")),
+        "HERMES_REAL_HOME must win over a sandboxed HOME"
+    );
+}
+
+#[test]
+fn ignores_relative_agent_real_home() {
+    let dir = resolve_global_dir(
+        lookup(&[("HERMES_REAL_HOME", "relative".into())]),
+        Some(abs("home")),
+    );
+    assert_eq!(
+        dir,
+        Some(home_config("home")),
+        "relative HERMES_REAL_HOME must fall back to the home directory"
+    );
+}
+
+#[test]
+fn xdg_config_home_wins_over_agent_real_home() {
+    let dir = resolve_global_dir(
+        lookup(&[
+            ("XDG_CONFIG_HOME", abs("xdg").into()),
+            ("HERMES_REAL_HOME", abs("real").into()),
+        ]),
+        Some(abs("home")),
+    );
+    assert_eq!(dir, Some(abs("xdg").join("steplock")), "XDG path expected");
+}
