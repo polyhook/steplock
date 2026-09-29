@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- `ack.sh` left the previous state's `transitions` in `state.json`, so a second ack before the hook fired again failed with `invalid next state ''`. The agent had to retry the gated command after every step. `ack.sh` now sets `transitions` and `next_state` for the new state, and a session started by an older steplock gets the fixed `ack.sh` on its next block
+
 ## [0.2.0] - 2026-09-29
 
 ### Changed

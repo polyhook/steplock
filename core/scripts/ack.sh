@@ -24,10 +24,13 @@ if [ -z "$MATCHED" ]; then
   exit 1
 fi
 
+# Set the new state's transitions from the flow, so the next ack works
+# without the hook firing in between.
 jq --arg cur "$CURRENT" --arg next "$NEXT" '
   .visited      += [$cur] |
   .current_state = $next  |
-  .next_state    = null
+  .transitions   = (.flow_transitions[$next] // []) |
+  .next_state    = (if (.transitions | length) == 1 then .transitions[0] else null end)
 ' "$STATE" > "$TMP" && mv "$TMP" "$STATE"
 
 # Append ack event to audit.log — failures silently ignored (audit must never block).

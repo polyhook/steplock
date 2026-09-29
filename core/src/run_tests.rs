@@ -76,6 +76,7 @@ fn approves_and_resets_state_when_complete() {
         current_state: "[*]".to_owned(),
         next_state: None,
         transitions: vec![],
+        flow_transitions: HashMap::new(),
         visited: vec!["clean_code".to_owned()],
     };
     save_state(&session_dir.join("state.json"), &state).unwrap();
@@ -635,6 +636,7 @@ fn unknown_current_state_in_flow_skips_checklist() {
         current_state: "nonexistent_state".to_owned(),
         next_state: None,
         transitions: vec![],
+        flow_transitions: HashMap::new(),
         visited: vec![],
     };
     save_state(&session_dir.join("state.json"), &state).unwrap();
@@ -660,6 +662,7 @@ fn complete_event_written_to_audit_log() {
         current_state: "[*]".to_owned(),
         next_state: None,
         transitions: vec![],
+        flow_transitions: HashMap::new(),
         visited: vec!["clean_code".to_owned()],
     };
     save_state(&session_dir.join("state.json"), &state).unwrap();

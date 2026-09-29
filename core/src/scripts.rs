@@ -7,14 +7,15 @@ use crate::flow::FlowGraph;
 
 static ACK_SH: &str = include_str!("../scripts/ack.sh");
 
-/// Write ack.sh to `dir` only if it does not already exist.
+/// Write ack.sh to `dir` unless it already holds the current script.
+/// A session started by an older steplock gets the current script on its next block.
 ///
 /// # Errors
 ///
 /// Returns `Err` if writing the file or setting its permissions fails.
 pub fn ensure_ack_sh(dir: &Path) -> Result<()> {
     let path = dir.join("ack.sh");
-    if path.exists() {
+    if fs::read_to_string(&path).is_ok_and(|s| s == ACK_SH) {
         return Ok(());
     }
     write_executable(&path, ACK_SH)
