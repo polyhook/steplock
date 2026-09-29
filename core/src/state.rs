@@ -22,6 +22,10 @@ pub struct SessionState {
     pub next_state: Option<String>,
     /// All valid next state names from `current_state` (including `"[*]"`).
     pub transitions: Vec<String>,
+    /// Outgoing transitions for every state in the flow, so `ack.sh` can set
+    /// `transitions` and `next_state` for the state it advances to.
+    #[serde(default, skip_serializing_if = "HashMap::is_empty")]
+    pub flow_transitions: HashMap<String, Vec<String>>,
     /// States that have been acknowledged in this session so far.
     pub visited: Vec<String>,
 }
@@ -66,6 +70,7 @@ pub fn init_state(checklist: &str, initial_state: &str) -> SessionState {
         current_state: initial_state.to_owned(),
         next_state: None,
         transitions: Vec::new(),
+        flow_transitions: HashMap::new(),
         visited: Vec::new(),
     }
 }

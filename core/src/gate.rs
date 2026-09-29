@@ -1,4 +1,5 @@
 //! Checklist gate: decides whether one checklist blocks a hook event.
+use std::collections::HashMap;
 use std::fmt::Write as _;
 use std::fs;
 use std::path::Path;
@@ -90,6 +91,7 @@ fn block_reset_always(
         current_state: initial_state.to_owned(),
         next_state,
         transitions,
+        flow_transitions: HashMap::new(),
         visited: vec![],
     };
     audit::append(
@@ -152,6 +154,7 @@ fn block_reset_session(
         .cloned()
         .filter(|_| raw_transitions.len() == 1);
     state.transitions = raw_transitions;
+    state.flow_transitions.clone_from(&flow.transitions);
 
     save_state(&state_path, &state)?;
     scripts::ensure_ack_sh(&session_dir)?;

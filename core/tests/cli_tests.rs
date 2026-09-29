@@ -416,3 +416,50 @@ fn hermes_hook_uses_real_home_global_checklist_when_home_is_sandboxed() {
         "global checklist from the real home must run: {json}"
     );
 }
+
+#[test]
+fn ack_sh_advances_twice_without_a_hook_call_between() {
+    let tmp = TempDir::new().unwrap();
+    let dir = tmp.path().join(".steplock/checklists/gate");
+    fs::create_dir_all(&dir).unwrap();
+    fs::write(
+        dir.join("config.toml"),
+        "on_event = \"tool:before\"\non_tool = \"bash\"\nreset = \"session\"\n",
+    )
+    .unwrap();
+    fs::write(
+        dir.join("flow.mmd"),
+        "stateDiagram-v2\n    [*] --> one\n    one --> two\n    two --> left\n    two --> right\n    left --> three\n    right --> three\n    three --> [*]\n    one: Step one\n    two: Step two\n    left: Go left\n    right: Go right\n    three: Step three\n",
+    )
+    .unwrap();
+
+    let stdin = hook_event("bash", "git push", "sess-ack");
+    let (first_code, _, _) = run_steplock(tmp.path(), &stdin);
+    assert_eq!(first_code, 0, "first call blocks at step one");
+
+    let ack = tmp.path().join(".steplock/sessions/sess-ack/gate/ack.sh");
+    let run_ack = |arg: Option<&str>| {
+        let mut cmd = Command::new("sh");
+        cmd.arg(&ack);
+        if let Some(a) = arg {
+            cmd.arg(a);
+        }
+        cmd.output().unwrap()
+    };
+    // one -> two (linear), two -> right (branch), right -> three (linear): no hook call between.
+    for arg in [None, Some("right"), None] {
+        let out = run_ack(arg);
+        assert!(
+            out.status.success(),
+            "ack {arg:?} failed: {}",
+            String::from_utf8_lossy(&out.stderr)
+        );
+    }
+
+    let (code, stdout, _) = run_steplock(tmp.path(), &stdin);
+    assert_eq!(code, 0);
+    assert!(
+        stdout.contains("Step three"),
+        "expected block at step three, got: {stdout}"
+    );
+}

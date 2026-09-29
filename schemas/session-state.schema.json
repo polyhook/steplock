@@ -24,6 +24,11 @@
       "description": "Valid next state names from current_state. ack.sh validates $1 against this list.",
       "items": { "type": "string" }
     },
+    "flow_transitions": {
+      "type": "object",
+      "description": "Outgoing transitions for every state in the flow. ack.sh reads it to set transitions and next_state for the state it advances to.",
+      "additionalProperties": { "type": "array", "items": { "type": "string" } }
+    },
     "visited": {
       "type": "array",
       "description": "State node names already acknowledged this scope. Written by ack.sh.",

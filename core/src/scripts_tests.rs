@@ -41,13 +41,12 @@ fn ack_sh_appends_audit_event() {
 }
 
 #[test]
-fn ensure_ack_sh_is_idempotent() {
+fn ensure_ack_sh_replaces_stale_script() {
     let tmp = TempDir::new().unwrap();
     let path = tmp.path().join("ack.sh");
-    fs::write(&path, "custom content").unwrap();
+    fs::write(&path, "old script").unwrap();
     ensure_ack_sh(tmp.path()).unwrap();
-    // Should not overwrite existing file
-    assert_eq!(fs::read_to_string(&path).unwrap(), "custom content");
+    assert_eq!(fs::read_to_string(&path).unwrap(), ACK_SH);
 }
 
 #[test]

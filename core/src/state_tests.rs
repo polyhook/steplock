@@ -1,5 +1,6 @@
 //! Unit tests for `state`.
 use super::*;
+use std::collections::HashMap;
 use tempfile::TempDir;
 
 #[test]
@@ -25,6 +26,7 @@ fn is_complete_true_at_end() {
         current_state: "[*]".to_owned(),
         next_state: None,
         transitions: vec![],
+        flow_transitions: HashMap::new(),
         visited: vec!["step_one".to_owned()],
     };
     assert!(s.is_complete());
@@ -39,6 +41,7 @@ fn save_and_load_roundtrip() {
         current_state: "check_one".to_owned(),
         next_state: Some("check_two".to_owned()),
         transitions: vec!["check_two".to_owned()],
+        flow_transitions: HashMap::new(),
         visited: vec!["prev".to_owned()],
     };
     save_state(&path, &s).unwrap();
