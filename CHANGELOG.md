@@ -7,11 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-09-29
+
 ### Changed
 - `steplock init` and `steplock init --global` no longer write a default `example-gate` checklist. They create an empty `checklists/` directory
 
 ### Fixed
-- The `steplock init` sample checklist and the `git-push-quality-gate` example matched the literal text `git push`, so `git -C <dir> push` (or any global option between `git` and `push`) skipped the gate. They now match on `command_words`
+- The `git-push-quality-gate` example matched the literal text `git push`, so `git -C <dir> push` (or any global option between `git` and `push`) skipped the gate. It now matches on `command_words`
 
 ## [0.1.0] - 2026-09-24
 
