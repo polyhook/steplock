@@ -302,9 +302,12 @@ fn init_global_scaffolds_global_dir() {
     let target = global.path().join("steplock");
     let output = run_subcommand_with_global(&["init", "--global"], global.path(), &target);
     assert!(output.status.success(), "init --global should succeed");
-    assert!(
-        target.join("checklists/example-gate/config.toml").exists(),
-        "sample checklist expected in global dir"
+    let checklists = target.join("checklists");
+    assert!(checklists.is_dir(), "checklists/ expected in global dir");
+    assert_eq!(
+        fs::read_dir(&checklists).unwrap().count(),
+        0,
+        "init must not write a default checklist"
     );
     assert!(
         !target.join(".gitignore").exists(),

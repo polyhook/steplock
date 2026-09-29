@@ -61,7 +61,7 @@ cargo install steplock
 
 ## Project setup
 
-Run inside your repo root. Creates the `.steplock/checklists/` directory tree:
+Run inside your repo root. Creates an empty `.steplock/checklists/` directory and a `.steplock/.gitignore`. No checklist is written:
 
 ```sh
 steplock init
@@ -177,7 +177,7 @@ Use the full path to the binary (`which steplock`; `~/.cargo/bin/steplock` after
   ```sh
   echo '{"args": {"command": "git push origin main"}, "session_id": "check"}' > /tmp/push.json
   hermes hooks test pre_tool_call --for-tool terminal --payload-file /tmp/push.json
-  # parsed (Hermes wire shape): {"action": "block", "message": "[example-gate: 1/2] ..."}
+  # parsed (Hermes wire shape): {"action": "block", "message": "[<checklist>: 1/N] ..."}
   ```
 
 Hermes runs hooks in the directory where Hermes started, not in the terminal tool's working directory. Global checklists do not depend on this. A project `.steplock/` is found only when Hermes was started inside that project.
@@ -209,7 +209,7 @@ cat .steplock/audit.log
 
 ## Global checklists
 
-Global checklists apply to every project. Create the global steplock directory with a sample checklist:
+Global checklists apply to every project. Create the global steplock directory (with an empty `checklists/`):
 
 ```sh
 steplock init --global

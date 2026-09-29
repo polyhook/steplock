@@ -144,25 +144,14 @@ fn init_creates_checklists_dir_and_gitignore() {
 }
 
 #[test]
-fn init_scaffolds_sample_checklist() {
+fn init_writes_no_checklist() {
     let tmp = TempDir::new().unwrap();
     run_init(tmp.path()).unwrap();
-    let sample = tmp.path().join(".steplock/checklists/example-gate");
-    assert!(sample.join("config.toml").exists());
-    assert!(sample.join("flow.mmd").exists());
-    let cfg = fs::read_to_string(sample.join("config.toml")).unwrap();
-    assert!(cfg.contains("command_words"));
-    let flow = fs::read_to_string(sample.join("flow.mmd")).unwrap();
-    assert!(flow.contains("stateDiagram-v2"));
-}
-
-#[test]
-fn init_sample_checklist_is_valid() {
-    let tmp = TempDir::new().unwrap();
-    run_init(tmp.path()).unwrap();
+    let checklists = tmp.path().join(".steplock/checklists");
+    assert_eq!(fs::read_dir(&checklists).unwrap().count(), 0);
     let stdin = claude_stdin("git push origin main", "s1");
     let resp = run_app(stdin.as_bytes(), tmp.path(), None).unwrap();
-    assert!(matches!(resp, polyhook::HookResponse::BlockResponse(_)));
+    assert!(!matches!(resp, polyhook::HookResponse::BlockResponse(_)));
 }
 
 #[test]
@@ -475,30 +464,5 @@ fn hermes_session_end_cleans_global_session() {
     assert!(
         !global_dir.join("sessions/hermes-s2").exists(),
         "on_session_end must clean the global session"
-    );
-}
-
-#[test]
-fn init_sample_blocks_git_push_with_global_options() {
-    let tmp = TempDir::new().unwrap();
-    run_init(tmp.path()).unwrap();
-    for cmd in [
-        "git -C /repo push origin main",
-        "git push",
-        "cd x && git push -q",
-    ] {
-        let stdin = claude_stdin(cmd, "s-opts");
-        let resp = run_app(stdin.as_bytes(), tmp.path(), None).unwrap();
-        assert!(
-            matches!(resp, polyhook::HookResponse::BlockResponse(_)),
-            "sample must block `{cmd}`"
-        );
-        fs::remove_dir_all(tmp.path().join(".steplock/sessions")).unwrap();
-    }
-    let stdin = claude_stdin("git status", "s-opts");
-    let resp = run_app(stdin.as_bytes(), tmp.path(), None).unwrap();
-    assert!(
-        !matches!(resp, polyhook::HookResponse::BlockResponse(_)),
-        "sample must not block unrelated git commands"
     );
 }

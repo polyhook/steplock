@@ -38,7 +38,7 @@ struct Cli {
 /// `steplock` subcommands.
 #[derive(Debug, Subcommand)]
 enum CliCommand {
-    /// Create .steplock/checklists/ with a sample checklist in the current directory
+    /// Create an empty .steplock/checklists/ in the current directory
     Init {
         /// Create checklists/ in the global steplock directory instead
         #[arg(long)]
@@ -168,21 +168,12 @@ fn run_hook() {
     }
 }
 
-const SAMPLE_CONFIG: &str = r#"on_event = "tool:before"
-on_tool = "bash"
-match_input = "input.command_words.exists(x, x == 'git') && input.command_words.exists(x, x == 'push')"
-reset = "session"
-"#;
-
-const SAMPLE_FLOW: &str = "stateDiagram-v2\n    [*] --> tests_pass\n    tests_pass --> reviewed\n    reviewed --> [*]\n    tests_pass : Tests pass locally\n    reviewed : Code reviewed\n";
-
 /// Create `.steplock/checklists/` and a `.steplock/.gitignore` in `dir`.
-/// Also writes a ready-to-use sample checklist so `git push` is blocked immediately.
 fn run_init(dir: &Path) -> io::Result<()> {
     init_steplock_dir(&dir.join(".steplock"), true)
 }
 
-/// Create `checklists/` with a sample checklist in `steplock_dir`.
+/// Create an empty `checklists/` in `steplock_dir`. No checklist is written.
 /// With `gitignore`, also writes a `.gitignore` for session state and the audit log.
 fn init_steplock_dir(steplock_dir: &Path, gitignore: bool) -> io::Result<()> {
     let checklists_dir = steplock_dir.join("checklists");
@@ -194,17 +185,8 @@ fn init_steplock_dir(steplock_dir: &Path, gitignore: bool) -> io::Result<()> {
     if gitignore {
         fs::write(steplock_dir.join(".gitignore"), "sessions/\naudit.log\n")?;
     }
-    let sample_dir = checklists_dir.join("example-gate");
-    fs::create_dir_all(&sample_dir)?;
-    fs::write(sample_dir.join("config.toml"), SAMPLE_CONFIG)?;
-    fs::write(sample_dir.join("flow.mmd"), SAMPLE_FLOW)?;
     println!("steplock: initialized {}", checklists_dir.display());
-    println!(
-        "A sample checklist was written to {}.",
-        sample_dir.display()
-    );
-    println!("It will block `git push` until two quality checks are acknowledged.");
-    println!("Edit config.toml and flow.mmd to customize it, or add more checklists.");
+    println!("Add a checklist as checklists/<name>/config.toml and flow.mmd.");
     Ok(())
 }
 
