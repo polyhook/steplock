@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.2] - 2026-10-04
+
+### Fixed
+- In Claude Code, every session end showed `SessionEnd hook [steplock] failed: Hook JSON output validation failed`. polyhook labeled Claude Code's `SessionEnd` (and `SessionStart`) as Gemini CLI and answered `{"decision":"allow"}`. steplock now requires polyhook 0.1.12, which detects them as Claude Code and answers `{}`
+
 ## [0.2.1] - 2026-09-29
 
 ### Fixed
