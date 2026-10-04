@@ -626,18 +626,18 @@ checksum = "a89322df9ebe1c1578d689c92318e070967d1042b512afbe49518723f4e6d5cd"
 
 [[package]]
 name = "polyhook"
-version = "0.1.11"
+version = "0.1.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3c8b5c80f125dbd9cef5df7475ab359575f9f0558c64f727560ac14513f6ced3"
+checksum = "064f93938b54a5dd1c471910f74c72096c127fd232afc6e017144c59d980d9f0"
 dependencies = [
  "polyhook-core",
 ]
 
 [[package]]
 name = "polyhook-core"
-version = "0.1.11"
+version = "0.1.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f21264c1c460c8d7b216ba7a66059a3b14b0814d6089674d2fd4e0ca27bab75c"
+checksum = "510f41412f8e831bcd897a10be4aaa9d0bdc803c3bafddb3dfc64e03492604cb"
 dependencies = [
  "prettyplease",
  "proc-macro2",
@@ -994,7 +994,7 @@ checksum = "67b1b7a3b5fe4f1376887184045fcf45c69e92af734b7aaddc05fb777b6fbd03"
 
 [[package]]
 name = "steplock"
-version = "0.2.1"
+version = "0.2.2"
 dependencies = [
  "cel-interpreter",
  "chrono",
@@ -1046,7 +1046,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "32497e9a4c7b38532efcdebeef879707aa9f794296a4f0244f6f69e9bc8574bd"
 dependencies = [
  "fastrand",
- "getrandom 0.3.4",
+ "getrandom 0.4.2",
  "once_cell",
  "rustix",
  "windows-sys",

@@ -206,21 +206,21 @@ fn clean_leaves_sessions_dir_intact() {
 #[test]
 fn validate_returns_true_when_no_checklists_dir() {
     let tmp = TempDir::new().unwrap();
-    assert!(run_validate(tmp.path(), None).unwrap());
+    assert!(run_validate(tmp.path(), None));
 }
 
 #[test]
 fn validate_returns_true_when_checklists_empty() {
     let tmp = TempDir::new().unwrap();
     fs::create_dir_all(tmp.path().join(".steplock/checklists")).unwrap();
-    assert!(run_validate(tmp.path(), None).unwrap());
+    assert!(run_validate(tmp.path(), None));
 }
 
 #[test]
 fn validate_returns_true_for_valid_checklist() {
     let tmp = TempDir::new().unwrap();
     setup_checklist(tmp.path());
-    assert!(run_validate(tmp.path(), None).unwrap());
+    assert!(run_validate(tmp.path(), None));
 }
 
 #[test]
@@ -233,7 +233,7 @@ fn validate_returns_false_when_config_toml_missing() {
         "stateDiagram-v2\n    [*] --> s\n    s --> [*]\n    s: Step\n",
     )
     .unwrap();
-    assert!(!run_validate(tmp.path(), None).unwrap());
+    assert!(!run_validate(tmp.path(), None));
 }
 
 #[test]
@@ -246,7 +246,7 @@ fn validate_returns_false_when_flow_mmd_missing() {
         "on_event = \"tool:before\"\nreset = \"session\"\n",
     )
     .unwrap();
-    assert!(!run_validate(tmp.path(), None).unwrap());
+    assert!(!run_validate(tmp.path(), None));
 }
 
 #[test]
@@ -260,7 +260,7 @@ fn validate_returns_false_for_invalid_config_toml() {
         "stateDiagram-v2\n    [*] --> s\n    s --> [*]\n    s: Step\n",
     )
     .unwrap();
-    assert!(!run_validate(tmp.path(), None).unwrap());
+    assert!(!run_validate(tmp.path(), None));
 }
 
 #[test]
@@ -274,7 +274,7 @@ fn validate_returns_false_for_invalid_flow_mmd() {
     )
     .unwrap();
     fs::write(cl_dir.join("flow.mmd"), "stateDiagram-v2\n    a --> b\n").unwrap();
-    assert!(!run_validate(tmp.path(), None).unwrap());
+    assert!(!run_validate(tmp.path(), None));
 }
 
 #[test]
@@ -289,7 +289,7 @@ fn validate_continues_checking_all_checklists_after_failure() {
         "stateDiagram-v2\n    [*] --> s\n    s --> [*]\n    s: Step\n",
     )
     .unwrap();
-    assert!(!run_validate(tmp.path(), None).unwrap());
+    assert!(!run_validate(tmp.path(), None));
 }
 
 fn parse(args: &[&str]) -> Cli {
