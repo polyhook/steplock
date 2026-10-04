@@ -74,13 +74,8 @@ fn main() {
         Some(CliCommand::Validate) => {
             let dir = env::current_dir().unwrap_or_else(|_| PathBuf::from("."));
             let root = find_repo_root_from(&dir).unwrap_or(dir);
-            match run_validate(&root, global_steplock_dir().as_deref()) {
-                Ok(true) => {}
-                Ok(false) => process::exit(1),
-                Err(e) => {
-                    eprintln!("steplock: validate failed: {e}");
-                    process::exit(1);
-                }
+            if !run_validate(&root, global_steplock_dir().as_deref()) {
+                process::exit(1);
             }
         }
         Some(CliCommand::Clean { global: false }) => {
@@ -102,19 +97,18 @@ fn exit_on_error(command: &str, result: io::Result<()>) {
 }
 
 /// Validate all checklists in `.steplock/checklists/` and in the global steplock directory.
-/// Returns `Ok(true)` if all valid, `Ok(false)` if any checklist failed validation (errors
-/// already printed), or `Err` on I/O.
-fn run_validate(repo_root: &Path, global_dir: Option<&Path>) -> io::Result<bool> {
-    let project_ok = validate_dir(&repo_root.join(".steplock").join("checklists"), "")?;
-    let global_ok = match global_dir {
-        Some(global) => validate_dir(&global.join("checklists"), "global")?,
-        None => true,
-    };
-    Ok(project_ok && global_ok)
+/// Returns `true` if all valid, `false` if any checklist failed validation (errors already
+/// printed). Both directories are always checked, so every error is reported.
+fn run_validate(repo_root: &Path, global_dir: Option<&Path>) -> bool {
+    let project_ok = validate_dir(&repo_root.join(".steplock").join("checklists"), "");
+    let global_ok =
+        global_dir.is_none_or(|global| validate_dir(&global.join("checklists"), "global"));
+    project_ok && global_ok
 }
 
 /// Validate one `checklists/` directory. `scope` names it in messages (`""` or `"global"`).
-fn validate_dir(checklists_dir: &Path, scope: &str) -> io::Result<bool> {
+/// Returns `false` if any checklist failed validation (errors already printed).
+fn validate_dir(checklists_dir: &Path, scope: &str) -> bool {
     let shown = checklists_dir.display();
     let (words, label_prefix) = if scope.is_empty() {
         (String::new(), String::new())
@@ -123,18 +117,18 @@ fn validate_dir(checklists_dir: &Path, scope: &str) -> io::Result<bool> {
     };
     if !checklists_dir.exists() {
         println!("steplock: no {words}checklists found at {shown}");
-        return Ok(true);
+        return true;
     }
 
     let errors = steplock::validate_checklists(checklists_dir);
     if errors.is_empty() {
         println!("steplock: all {words}checklists valid ({shown})");
-        Ok(true)
+        true
     } else {
         for (label, err) in &errors {
             eprintln!("steplock: [{label_prefix}{label}] error: {err}");
         }
-        Ok(false)
+        false
     }
 }
 
