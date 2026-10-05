@@ -49,7 +49,7 @@ agent retries → next item shown
 action approved
 ```
 
-Each checklist item requires one full hook invocation to acknowledge. The agent cannot skip ahead.
+Items must be acknowledged in flow order: each `ack.sh` call advances exactly one state. `ack.sh` may be run several times in a row without retrying the gated action in between (since 0.2.1), so the hook does not guarantee the agent was shown every question before acknowledging it. The audit log records every ack.
 
 ---
 
