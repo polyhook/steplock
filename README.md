@@ -11,6 +11,10 @@ steplock sits on top of the [polyhook](https://github.com/tupe12334/polyhook) SD
 
 **[Installation →](Installation.md)** · **[Architecture →](Architecture.md)** · **[Contributing →](CONTRIBUTING.md)**
 
+[![Watch how steplock works: the agent runs git push, steplock blocks it and asks "Did you run the tests?"](docs/media/steplock-explained-poster.png)](docs/media/steplock-explained.mp4)
+
+▶ **[Watch: how steplock works](docs/media/steplock-explained.mp4)** (1.5 min, narrated, with subtitles)
+
 ---
 
 ## The Problem
