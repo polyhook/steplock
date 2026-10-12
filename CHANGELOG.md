@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- A `flow.mmd` with a transition label (`a --> b : text`) failed with `state 'a' has no path to [*]`. steplock read `b : text` as the target state. It now ignores the label (#232)
+
 ## [0.2.2] - 2026-10-04
 
 ### Fixed
