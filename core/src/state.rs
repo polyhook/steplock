@@ -1,8 +1,8 @@
 //! Session state persistence and core domain types.
 use std::collections::HashMap;
 use std::fs;
+use std::io::Write;
 use std::path::Path;
-use std::process;
 
 use serde::{Deserialize, Serialize};
 
@@ -48,17 +48,18 @@ pub fn load_state(path: &Path) -> Result<SessionState> {
     Ok(serde_json::from_str(&content)?)
 }
 
-/// Atomically write `state` to `path` via a PID-suffixed temp file and POSIX `mv`.
+/// Atomically write `state` to `path` via a uniquely named temp file in the same
+/// directory, renamed over `path`. The temp file is removed if any step fails.
 ///
 /// # Errors
 ///
 /// Returns an error if serialization fails or the write or rename fails.
 pub fn save_state(path: &Path, state: &SessionState) -> Result<()> {
     let dir = path.parent().unwrap_or_else(|| Path::new("."));
-    let tmp = dir.join(format!("state.json.tmp.{}", process::id()));
     let content = serde_json::to_string_pretty(state)?;
-    fs::write(&tmp, content)?;
-    fs::rename(&tmp, path)?;
+    let mut tmp = tempfile::NamedTempFile::new_in(dir)?;
+    tmp.write_all(content.as_bytes())?;
+    tmp.persist(path).map_err(|e| e.error)?;
     Ok(())
 }
 
