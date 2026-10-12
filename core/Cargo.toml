@@ -89,6 +89,7 @@ manual_let_else = "deny"
 items_after_statements = "deny"
 needless_pass_by_value = "deny"
 trivially_copy_pass_by_ref = "deny"
+explicit_into_iter_loop = "deny"
 
 [dependencies]
 cel-interpreter = "0.10"

@@ -53,6 +53,25 @@ stateDiagram-v2
 }
 
 #[test]
+fn ignores_transition_labels() {
+    let mmd = r"
+stateDiagram-v2
+    [*] --> tests
+    tests --> docs : yes
+    tests --> fix : no
+    fix --> docs
+    docs --> [*] : done
+    tests : Did all tests pass?
+";
+    let g = parse_mmd("test.mmd", mmd).unwrap();
+    let mut nexts = g.next_states("tests");
+    nexts.sort();
+    assert_eq!(nexts, vec!["docs", "fix"]);
+    assert!(g.is_terminal("docs"));
+    assert_eq!(g.labels["tests"], "Did all tests pass?");
+}
+
+#[test]
 fn error_on_missing_initial_state() {
     let mmd = "stateDiagram-v2\n    a --> b\n";
     let err = parse_mmd("test.mmd", mmd);

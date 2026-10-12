@@ -128,7 +128,10 @@ pub fn parse_mmd(path: &str, content: &str) -> Result<FlowGraph> {
 }
 
 fn split_transition(line: &str) -> Option<(&str, &str)> {
-    line.split_once("-->")
+    let (lhs, rhs) = line.split_once("-->")?;
+    // Drop a transition label (`a --> b : text`) so the target is just `b`.
+    let rhs = rhs.split_once(':').map_or(rhs, |(target, _)| target);
+    Some((lhs, rhs))
 }
 
 fn split_label(line: &str) -> Option<(&str, &str)> {
