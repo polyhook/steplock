@@ -252,6 +252,6 @@ fn build_block_message(
 }
 
 #[cfg(test)]
-#[allow(clippy::panic, clippy::unwrap_used)]
+#[allow(clippy::indexing_slicing, clippy::panic, clippy::unwrap_used)]
 #[path = "gate_tests.rs"]
 mod tests;

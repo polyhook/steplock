@@ -75,6 +75,16 @@ fn block_message(resp: Option<HookResponse>) -> String {
     }
 }
 
+/// `audit::append` swallows every error, so the arguments the gate passes are
+/// only observable through the log itself.
+fn audit_lines(steplock_dir: &Path) -> Vec<serde_json::Value> {
+    fs::read_to_string(steplock_dir.join("audit.log"))
+        .unwrap()
+        .lines()
+        .map(|l| serde_json::from_str(l).unwrap())
+        .collect()
+}
+
 #[test]
 fn empty_session_id_creates_and_reuses_a_fallback_scope_key() {
     let tmp = TempDir::new().unwrap();
@@ -113,6 +123,13 @@ fn single_transition_state_precomputes_next_state() {
     assert_eq!(state.transitions, vec!["tests_pass".to_owned()]);
     // ack.sh needs the whole graph to advance beyond the current state.
     assert!(state.flow_transitions.contains_key("tests_pass"));
+
+    let lines = audit_lines(&steplock_dir);
+    assert_eq!(lines.len(), 1);
+    assert_eq!(lines[0]["event"], "block");
+    assert_eq!(lines[0]["checklist"], "gate");
+    assert_eq!(lines[0]["state"], "clean_code");
+    assert_eq!(lines[0]["session"], "sess-1");
 }
 
 #[test]
@@ -184,6 +201,13 @@ fn reset_always_blocks_without_writing_session_state() {
         !steplock_dir.join("sessions").exists(),
         "reset=always keeps no session state"
     );
+
+    // reset=always has no session scope, so the gate logs the literal "always".
+    let lines = audit_lines(&steplock_dir);
+    assert_eq!(lines.len(), 1);
+    assert_eq!(lines[0]["event"], "block");
+    assert_eq!(lines[0]["state"], "clean_code");
+    assert_eq!(lines[0]["session"], "always");
 }
 
 #[test]
@@ -202,6 +226,11 @@ fn completed_checklist_approves_once_and_restarts() {
     let reset = load_state(&path).unwrap();
     assert_eq!(reset.current_state, "clean_code");
     assert!(reset.visited.is_empty());
+
+    let lines = audit_lines(&steplock_dir);
+    assert_eq!(lines[0]["event"], "complete");
+    assert_eq!(lines[0]["state"], "[*]");
+    assert_eq!(lines[0]["session"], "sess-1");
 
     // The next attempt blocks again from the top.
     let next = evaluate_checklist(&make_event("sess-1"), &steplock_dir, &checklist_dir).unwrap();
