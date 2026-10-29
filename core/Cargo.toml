@@ -91,6 +91,7 @@ needless_pass_by_value = "deny"
 trivially_copy_pass_by_ref = "deny"
 verbose_file_reads = "deny"
 unused_self = "deny"
+string_add = "deny"
 
 [dependencies]
 cel-interpreter = "0.10"

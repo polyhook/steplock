@@ -84,7 +84,9 @@ fn build_preview_sh(checklist_name: &str, flow: &FlowGraph) -> String {
         lines.push(format!("check '{label_escaped}' '{state_escaped}'"));
     }
 
-    lines.join("\n") + "\n"
+    let mut script = lines.join("\n");
+    script.push('\n');
+    script
 }
 
 #[cfg(test)]
