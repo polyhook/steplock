@@ -101,7 +101,7 @@ fn block_reset_always(
         initial_state,
         "always",
     );
-    let message = build_block_message(&state, flow, None);
+    let message = build_block_message(&state, flow, None, false);
     eprintln!("steplock: block [{checklist_name}] state={initial_state}");
     HookResponse::Block { message }
 }
@@ -136,7 +136,8 @@ fn block_reset_session(
         return Ok(None);
     }
 
-    // Raw transitions including [*] — stored in state.json for ack.sh validation.
+    // Raw transitions including [*] — stored in state.json so `steplock step done`
+    // (and the deprecated ack.sh) can validate the outcome.
     let raw_transitions: Vec<String> = flow
         .transitions
         .get(&state.current_state)
@@ -157,6 +158,7 @@ fn block_reset_session(
     state.flow_transitions.clone_from(&flow.transitions);
 
     save_state(&state_path, &state)?;
+    // Deprecated: kept so sessions and docs that still run ack.sh keep working.
     scripts::ensure_ack_sh(&session_dir)?;
     if allow_preview {
         scripts::ensure_preview_sh(&session_dir, checklist_name, flow)?;
@@ -174,7 +176,7 @@ fn block_reset_session(
         checklist_name, state.current_state, scope_key
     );
 
-    let message = build_block_message(&state, flow, Some(&session_dir));
+    let message = build_block_message(&state, flow, Some(&scope_key), allow_preview);
     Ok(Some(HookResponse::Block { message }))
 }
 
@@ -193,61 +195,58 @@ fn get_scope_key(event: &HookEvent, steplock_dir: &Path) -> Result<String> {
     Ok(id)
 }
 
-/// `session_dir` is `None` for `reset=always` checklists (no persistent ack.sh).
+/// `session` is `None` for `reset=always` checklists (no session state to record into).
+/// With `list_all`, the first block also lists every step of the checklist.
 fn build_block_message(
     state: &SessionState,
     flow: &FlowGraph,
-    session_dir: Option<&Path>,
+    session: Option<&str>,
+    list_all: bool,
 ) -> String {
-    let label = flow
-        .labels
-        .get(&state.current_state)
-        .map_or(state.current_state.as_str(), String::as_str);
-
+    let label_of = |s: &str| flow.labels.get(s).map_or(s, String::as_str).to_owned();
     let checklist = &state.checklist;
+    let current = &state.current_state;
     let step = state.visited.len() + 1;
     let total = flow.order.len();
-    let mut msg = format!("[{checklist}: {step}/{total}] {label}");
-    msg.push_str("\n\n");
+    let mut msg = format!("[{checklist}: {step}/{total}] {}\n\n", label_of(current));
 
-    let visible: Vec<&String> = state
+    let Some(session) = session else {
+        // reset=always: nothing to record — the agent confirms in conversation then retries.
+        msg.push_str("When done, retry your original command.");
+        return msg;
+    };
+
+    let record = format!("steplock step done {checklist} {current} --session {session}");
+    let evidence = r#"--evidence "<what you did and what you saw>""#;
+    let _ = writeln!(
+        msg,
+        "Checklist step {step} of {total}. Do what it asks, then record the result:"
+    );
+    let outcomes: Vec<&String> = state
         .transitions
         .iter()
         .filter(|s| s.as_str() != "[*]")
         .collect();
-
-    if let Some(dir) = session_dir {
-        let ack = dir.join("ack.sh");
-        let ack_path = ack.display();
-        if visible.len() <= 1 {
-            let _ = write!(
-                msg,
-                "When finished, run: sh {ack_path}\nThen retry your original command."
-            );
-        } else {
-            msg.push_str("When finished, run one of:\n");
-            for next in &visible {
-                let next_label = flow.labels.get(*next).map_or(next.as_str(), String::as_str);
-                let _ = writeln!(msg, "  sh {ack_path} {next}   — {next_label}");
-            }
-            msg.push_str("Then retry your original command.");
-        }
-
-        if state.visited.is_empty() {
-            let preview = dir.join("preview.sh");
-            if preview.exists() {
-                let _ = write!(
-                    msg,
-                    "\n(Tip: run sh {} to see all items first.)",
-                    preview.display()
-                );
-            }
-        }
+    if outcomes.len() <= 1 {
+        let _ = writeln!(msg, "  {record} {evidence}");
     } else {
-        // reset=always: no persistent ack.sh — agent confirms in conversation then retries.
-        msg.push_str("When done, retry your original command.");
+        msg.push_str("Pick the outcome that applies:\n");
+        for next in outcomes {
+            let _ = writeln!(
+                msg,
+                "  {record} --next {next} {evidence}   — {}",
+                label_of(next)
+            );
+        }
     }
+    msg.push_str("Then retry your original command.");
 
+    if list_all && state.visited.is_empty() {
+        msg.push_str("\n\nAll steps in this checklist:");
+        for (i, s) in flow.order.iter().enumerate() {
+            let _ = write!(msg, "\n  {}. {}", i + 1, label_of(s));
+        }
+    }
     msg
 }
 

@@ -121,7 +121,7 @@ fn single_transition_state_precomputes_next_state() {
     assert_eq!(state.current_state, "clean_code");
     assert_eq!(state.next_state.as_deref(), Some("tests_pass"));
     assert_eq!(state.transitions, vec!["tests_pass".to_owned()]);
-    // ack.sh needs the whole graph to advance beyond the current state.
+    // `steplock step done` needs the whole graph to advance beyond the current state.
     assert!(state.flow_transitions.contains_key("tests_pass"));
 
     let lines = audit_lines(&steplock_dir);
@@ -150,9 +150,13 @@ fn branching_state_leaves_next_state_unset_and_lists_every_choice() {
         vec!["ship".to_owned(), "abort".to_owned()]
     );
 
-    assert!(message.contains("run one of"), "message was: {message}");
-    assert!(message.contains("ack.sh ship"), "message was: {message}");
-    assert!(message.contains("ack.sh abort"), "message was: {message}");
+    assert!(
+        message.contains("Pick the outcome"),
+        "message was: {message}"
+    );
+    assert!(message.contains("--next ship"), "message was: {message}");
+    assert!(message.contains("--next abort"), "message was: {message}");
+    assert!(!message.contains("ack.sh"), "message was: {message}");
 }
 
 #[test]

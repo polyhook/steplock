@@ -6,6 +6,7 @@ use crate::catalog::checklist_dirs;
 use crate::error::Result;
 use crate::gate::evaluate_checklist;
 use crate::state::{HookEvent, HookResponse};
+use crate::step::is_step_command;
 
 /// Run the full steplock gate logic against the project checklists only.
 ///
@@ -52,6 +53,9 @@ pub fn run_with_global(
         if let Some(global) = global_dir {
             cleanup_session(global, &event.session_id)?;
         }
+        return Ok(HookResponse::Approve);
+    }
+    if is_step_command(event) {
         return Ok(HookResponse::Approve);
     }
 

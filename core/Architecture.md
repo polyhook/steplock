@@ -29,7 +29,7 @@ run(event, repo_root)
                     ├── empty transitions? → skip (flow changed, stale state)
                     │
                     ├── save_state (atomic)
-                    ├── ensure_ack_sh
+                    ├── ensure_ack_sh (deprecated)
                     ├── ensure_preview_sh (if allow_preview_request)
                     │
                     └── return Block { message }
@@ -44,7 +44,7 @@ Built from `stateDiagram-v2` Mermaid syntax by `flow::parse_mmd`. Only two const
 - **Transitions**: `X --> Y` (including `[*] --> X` and `X --> [*]`)
 - **Labels**: `X : Label text`
 
-`[*]` is a pseudo-node — it marks the start (initial transitions) and end (terminal transitions). It is never stored as a real state. `FlowGraph.order` is a BFS topological order of all real states, used by `preview.sh` generation.
+`[*]` is a pseudo-node — it marks the start (initial transitions) and end (terminal transitions). It is never stored as a real state. `FlowGraph.order` is a BFS topological order of all real states, used for the step list in the first block message and `preview.sh` generation.
 
 ## Scope key resolution
 
@@ -55,7 +55,7 @@ Built from `stateDiagram-v2` Mermaid syntax by `flow::parse_mmd`. Only two const
 
 ## Session state file
 
-`.steplock/sessions/<scope-key>/state.json` is the single source of truth. steplock writes it (via `save_state`) and `ack.sh` writes it (via `jq + mv`). Both use atomic writes to avoid corruption under concurrent agent access.
+`.steplock/sessions/<scope-key>/state.json` is the single source of truth. steplock writes it (via `save_state`) on each block and on each `steplock step done`; the deprecated `ack.sh` writes it via `jq + mv`. Both use atomic writes to avoid corruption under concurrent agent access.
 
 Fields written by `save_state`:
 
@@ -64,12 +64,12 @@ Fields written by `save_state`:
 | `checklist`     | init          | Checklist identifier |
 | `current_state` | each block    | Node the agent is currently gated on |
 | `next_state`    | each block    | Auto-advance target (`null` for branching states) |
-| `transitions`   | each block    | Valid next states for `ack.sh` validation |
-| `visited`       | `ack.sh`      | Nodes already acknowledged |
+| `transitions`   | each block    | Valid outcomes for `steplock step done` |
+| `visited`       | `steplock step done` | Steps already recorded |
 
 ## Script generation
 
-`ack.sh` and `preview.sh` are written once per session directory and never regenerated. `ack.sh` is a static template (embedded at compile time via `include_str!`). `preview.sh` is generated from the `FlowGraph` — one `check` call per state in topological order.
+The deprecated `ack.sh` and `preview.sh` are written once per session directory and never regenerated. `ack.sh` is a static template (embedded at compile time via `include_str!`). `preview.sh` is generated from the `FlowGraph` — one `check` call per state in topological order.
 
 ## Audit log
 

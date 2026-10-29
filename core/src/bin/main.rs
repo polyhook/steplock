@@ -8,6 +8,7 @@ use std::path::{Path, PathBuf};
 use std::process;
 
 use clap::{Parser, Subcommand};
+use steplock::step::{record_step_done, state_path};
 use steplock::{global_steplock_dir, run_with_global, HookEvent, HookResponse};
 
 /// Extra help text shown after the generated command list.
@@ -52,6 +53,33 @@ enum CliCommand {
         #[arg(long)]
         global: bool,
     },
+    /// Record checklist progress (the block message shows the exact command)
+    Step {
+        /// What to record
+        #[command(subcommand)]
+        action: StepCommand,
+    },
+}
+
+/// `steplock step` subcommands.
+#[derive(Debug, Subcommand)]
+enum StepCommand {
+    /// Record that you finished the current checklist step, with evidence
+    Done {
+        /// Checklist name, e.g. `pr-review`
+        checklist: String,
+        /// The step you finished (the current step id from the block message)
+        step: String,
+        /// Session id from the block message
+        #[arg(long)]
+        session: String,
+        /// What you did and what you saw; written to the audit log
+        #[arg(long)]
+        evidence: String,
+        /// The outcome you chose, when the step has more than one
+        #[arg(long)]
+        next: Option<String>,
+    },
 }
 
 fn main() {
@@ -85,7 +113,63 @@ fn main() {
         Some(CliCommand::Clean { global: true }) => {
             exit_on_error("clean", clean_sessions(&require_global_dir()));
         }
+        Some(CliCommand::Step {
+            action:
+                StepCommand::Done {
+                    checklist,
+                    step,
+                    session,
+                    evidence,
+                    next,
+                },
+        }) => {
+            let cwd = env::current_dir().unwrap_or_else(|_| PathBuf::from("."));
+            let dirs = step_dirs(&cwd, global_steplock_dir());
+            let done = run_step_done(
+                &dirs,
+                &session,
+                &checklist,
+                &step,
+                next.as_deref(),
+                &evidence,
+            );
+            match done {
+                Ok(msg) => println!("{msg}"),
+                Err(e) => {
+                    eprintln!("steplock: step done failed: {e}");
+                    process::exit(1);
+                }
+            }
+        }
     }
+}
+
+/// Steplock directories that may hold the session: the project's, then the global one.
+fn step_dirs(cwd: &Path, global: Option<PathBuf>) -> Vec<PathBuf> {
+    let project = find_repo_root_from(cwd).map(|root| root.join(".steplock"));
+    project.into_iter().chain(global).collect()
+}
+
+/// Record `step` in the first of `dirs` that holds this session's checklist state.
+fn run_step_done(
+    dirs: &[PathBuf],
+    session: &str,
+    checklist: &str,
+    step: &str,
+    next: Option<&str>,
+    evidence: &str,
+) -> Result<String, String> {
+    let dir = dirs
+        .iter()
+        .find(|d| state_path(d, session, checklist).exists())
+        .ok_or_else(|| format!("no checklist '{checklist}' in session '{session}'"))?;
+    let target = record_step_done(dir, session, checklist, step, next, evidence)
+        .map_err(|e| e.to_string())?;
+    Ok(if target == "[*]" {
+        format!("steplock: recorded '{step}'. Checklist '{checklist}' is complete; retry your original command.")
+    } else {
+        format!("steplock: recorded '{step}'. Next step: '{target}'; retry your original command to see it.")
+    })
 }
 
 /// Print `steplock: <command> failed: <error>` and exit 1 when `result` is an error.

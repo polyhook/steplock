@@ -11,7 +11,8 @@ Rust library implementing the steplock gate logic. Used by the `steplock` CLI bi
 | `flow`       | Parses `flow.mmd` into a `FlowGraph` (Mermaid `stateDiagram-v2`) |
 | `state`      | `SessionState` — read/write `state.json` atomically |
 | `cel_eval`   | Evaluates `match_input` CEL expressions against a `HookEvent` |
-| `scripts`    | Writes `ack.sh` and `preview.sh` to the session directory |
+| `scripts`    | Writes the deprecated `ack.sh` and `preview.sh` to the session directory |
+| `step`       | `steplock step done`: records a finished step with evidence and advances the state |
 | `audit`      | Appends JSONL events to `.steplock/audit.log` |
 | `error`      | `SteplockError` enum and `Result<T>` alias |
 | `validate`   | `validate_checklists` — checks all `config.toml`/`flow.mmd` pairs under a checklists dir, used by `steplock validate` |
@@ -45,7 +46,7 @@ All fields come from the polyhook layer — steplock does not read from stdin it
 
 ## State management
 
-`SessionState` is read and written by steplock on each invocation. `ack.sh` also writes it (via `jq` + atomic `mv`). Both paths are safe for concurrent access — `save_state` uses a PID-suffixed temp file and POSIX `mv` (atomic same-filesystem).
+`SessionState` is read and written by steplock on each invocation. `steplock step done` also writes it (via `save_state`); the deprecated `ack.sh` writes it via `jq` + atomic `mv`. Both paths are safe for concurrent access — `save_state` uses a PID-suffixed temp file and POSIX `mv` (atomic same-filesystem).
 
 ## CEL evaluation
 

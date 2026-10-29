@@ -2,7 +2,7 @@
 //!
 //! `steplock` intercepts tool calls from AI coding assistants (Claude Code,
 //! Cursor, etc.) and blocks execution until sequential checklist items are
-//! acknowledged by the agent via `ack.sh`.
+//! recorded by the agent with `steplock step done` and evidence.
 
 #![forbid(unsafe_code)]
 
@@ -28,6 +28,8 @@ pub mod run;
 pub(crate) mod scripts;
 /// Session state persistence.
 pub mod state;
+/// Recording finished checklist steps (`steplock step done`).
+pub mod step;
 /// Checklist validation utilities.
 pub mod validate;
 

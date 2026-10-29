@@ -13,25 +13,25 @@
     },
     "current_state": {
       "type": "string",
-      "description": "Name of the Mermaid state node currently being gated. Written by steplock on each block; advanced by ack.sh on each acknowledgment."
+      "description": "Name of the Mermaid state node currently being gated. Written by steplock on each block; advanced by `steplock step done` on each recorded step."
     },
     "next_state": {
       "type": ["string", "null"],
-      "description": "Auto-advance target for linear states (single outgoing transition). null for branching states — agent must pass the chosen state as $1 to ack.sh."
+      "description": "Auto-advance target for linear states (single outgoing transition). null for branching states — agent must pass the chosen state with `steplock step done --next`."
     },
     "transitions": {
       "type": "array",
-      "description": "Valid next state names from current_state. ack.sh validates $1 against this list.",
+      "description": "Valid next state names from current_state. `steplock step done` validates the outcome against this list.",
       "items": { "type": "string" }
     },
     "flow_transitions": {
       "type": "object",
-      "description": "Outgoing transitions for every state in the flow. ack.sh reads it to set transitions and next_state for the state it advances to.",
+      "description": "Outgoing transitions for every state in the flow. `steplock step done` reads it to set transitions and next_state for the state it advances to.",
       "additionalProperties": { "type": "array", "items": { "type": "string" } }
     },
     "visited": {
       "type": "array",
-      "description": "State node names already acknowledged this scope. Written by ack.sh.",
+      "description": "State node names already recorded this scope. Written by `steplock step done`.",
       "items": { "type": "string" }
     }
   }

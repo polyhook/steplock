@@ -12,9 +12,9 @@ A four-item quality checklist that gates `git push` commands.
 [*] → clean_code → test_coverage → documentation → no_secrets → [*]
 ```
 
-Each state blocks the agent until acknowledged. On the fifth invocation, the push is approved.
+Each state blocks the agent until the agent records it with `steplock step done`. On the fifth invocation, the push is approved.
 
-**Preview enabled**: `allow_preview_request = true` — on the first block, the agent sees a tip to run `preview.sh` and view all four items before starting.
+**Preview enabled**: `allow_preview_request = true` — on the first block, the block message lists all four items before the agent starts.
 
 ### Files
 

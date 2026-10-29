@@ -463,3 +463,54 @@ fn ack_sh_advances_twice_without_a_hook_call_between() {
         "expected block at step three, got: {stdout}"
     );
 }
+
+#[test]
+fn step_done_records_evidence_and_unblocks_the_retry() {
+    let tmp = TempDir::new().unwrap();
+    checklist(
+        tmp.path(),
+        "tool:before",
+        "bash",
+        Some("input.command.contains('git push')"),
+    );
+    let push = hook_event("bash", "git push", "sess-step");
+    let (_, blocked, _) = run_steplock(tmp.path(), &push);
+    assert!(
+        blocked.contains("steplock step done gate check --session sess-step"),
+        "block names the record command: {blocked}"
+    );
+
+    // The record command quotes `git push` in its evidence; the gate must not block it.
+    let record =
+        "steplock step done gate check --session sess-step --evidence \"ran git push --dry-run\"";
+    let (_, gated, _) = run_steplock(tmp.path(), &hook_event("bash", record, "sess-step"));
+    assert!(
+        !gated.contains("steplock step done"),
+        "record command must not be gated: {gated}"
+    );
+
+    let out = Command::new(STEPLOCK)
+        .current_dir(tmp.path())
+        .env("STEPLOCK_GLOBAL_DIR", "")
+        .args(["step", "done", "gate", "check", "--session", "sess-step"])
+        .args(["--evidence", "ran git push --dry-run"])
+        .output()
+        .unwrap();
+    assert!(
+        out.status.success(),
+        "step done failed: {}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+
+    let (code, stdout, _) = run_steplock(tmp.path(), &push);
+    assert_eq!(code, 0);
+    assert!(
+        !stdout.contains("Did you check?"),
+        "complete checklist approves: {stdout}"
+    );
+    let log = fs::read_to_string(tmp.path().join(".steplock/audit.log")).unwrap();
+    assert!(
+        log.contains("\"evidence\":\"ran git push --dry-run\""),
+        "evidence is audited: {log}"
+    );
+}

@@ -9,16 +9,42 @@ use serde_json::json;
 /// Append one JSONL line to `.steplock/audit.log`.
 /// Failures are silently ignored — audit logging must never block the hook.
 pub fn append(steplock_dir: &Path, event: &str, checklist: &str, state: &str, session: &str) {
-    let path = steplock_dir.join("audit.log");
-    let line = json!({
-        "event":     event,
-        "checklist": checklist,
-        "state":     state,
-        "session":   session,
-        "ts":        Utc::now().to_rfc3339(),
-    })
-    .to_string();
+    write_line(
+        steplock_dir,
+        &json!({
+            "event":     event,
+            "checklist": checklist,
+            "state":     state,
+            "session":   session,
+            "ts":        Utc::now().to_rfc3339(),
+        }),
+    );
+}
 
+/// Append a `step_done` line with the agent's `evidence` for the finished `state`.
+pub fn append_step_done(
+    steplock_dir: &Path,
+    checklist: &str,
+    state: &str,
+    session: &str,
+    evidence: &str,
+) {
+    write_line(
+        steplock_dir,
+        &json!({
+            "event":     "step_done",
+            "checklist": checklist,
+            "state":     state,
+            "session":   session,
+            "evidence":  evidence,
+            "ts":        Utc::now().to_rfc3339(),
+        }),
+    );
+}
+
+fn write_line(steplock_dir: &Path, value: &serde_json::Value) {
+    let path = steplock_dir.join("audit.log");
+    let line = value.to_string();
     if let Ok(mut f) = OpenOptions::new().create(true).append(true).open(&path) {
         let _ = writeln!(f, "{line}");
     }

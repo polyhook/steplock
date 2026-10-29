@@ -7,7 +7,7 @@
 
 **Stateful quality gates for AI coding agent actions.**
 
-steplock sits on top of the [polyhook](https://github.com/tupe12334/polyhook) SDK. It intercepts hook events and gates actions behind a sequential checklist — one question per invocation, acknowledged by the agent, persisted to disk.
+steplock sits on top of the [polyhook](https://github.com/tupe12334/polyhook) SDK. It intercepts hook events and gates actions behind a sequential checklist — one question per invocation, recorded by the agent with evidence, persisted to disk.
 
 **[Installation →](Installation.md)** · **[Architecture →](Architecture.md)** · **[Contributing →](CONTRIBUTING.md)**
 
@@ -40,7 +40,8 @@ block        approve
 agent with   action
 next item
    │
-agent acknowledges
+agent does the step and records it:
+steplock step done <checklist> <step> --session <id> --evidence "..."
    │
 state file updated
    │
@@ -51,7 +52,7 @@ agent retries → next item shown
 action approved
 ```
 
-Each checklist item requires one full hook invocation to acknowledge. The agent cannot skip ahead.
+Each checklist item needs its own `steplock step done` record, naming the current step and saying what the agent did and saw. The agent cannot skip ahead, and every record goes to `audit.log` with its evidence. The agent never runs a script that approves its own gate, so agent safety classifiers (such as Claude Code auto mode) do not flag the flow. The old `ack.sh` script still works but is deprecated; see [Architecture](Architecture.md#deprecated-acksh-and-previewsh).
 
 ---
 
@@ -69,7 +70,7 @@ Each checklist lives in its own directory under `.steplock/checklists/<name>/`. 
 
 **`config.toml`** — trigger and behaviour. See [`schemas/checklist-config.schema.json`](schemas/checklist-config.schema.json).
 
-**`flow.mmd`** — the [Mermaid `stateDiagram-v2`](https://mermaid.js.org/syntax/stateDiagram.html) diagram. State labels are the questions shown to the agent. steplock walks the graph — on each block it shows the label of the current state; on ack it advances to the next state. `[*]` marks start and end.
+**`flow.mmd`** — the [Mermaid `stateDiagram-v2`](https://mermaid.js.org/syntax/stateDiagram.html) diagram. State labels are the questions shown to the agent. steplock walks the graph — on each block it shows the label of the current state; when the agent records the step with `steplock step done` it advances to the next state. `[*]` marks start and end.
 
 ```
 stateDiagram-v2
