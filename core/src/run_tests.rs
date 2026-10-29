@@ -198,13 +198,21 @@ fn block_message_contains_checklist_name() {
 }
 
 #[test]
-fn block_message_contains_ack_sh_path() {
+fn block_message_contains_step_done_command() {
     let tmp = TempDir::new().unwrap();
     setup_checklist(tmp.path());
     let event = make_event("tool:before", "bash", "git push origin main", "sess-1");
     let resp = run(&event, tmp.path()).unwrap();
     if let HookResponse::Block { message } = resp {
-        assert!(message.contains("ack.sh"));
+        assert!(
+            message.contains("steplock step done quality-gate"),
+            "message was: {message}"
+        );
+        assert!(
+            message.contains("--session sess-1"),
+            "message was: {message}"
+        );
+        assert!(!message.contains("ack.sh"), "message was: {message}");
     } else {
         panic!("expected block");
     }
@@ -291,7 +299,7 @@ fn fallback_session_id_generated_when_empty() {
 }
 
 #[test]
-fn allow_preview_request_adds_tip() {
+fn allow_preview_request_lists_all_steps() {
     let tmp = TempDir::new().unwrap();
     let cl_dir = tmp.path().join(".steplock/checklists/preview-gate");
     fs::create_dir_all(&cl_dir).unwrap();
@@ -323,7 +331,10 @@ allow_preview_request = true
     );
     let resp = run(&event, tmp.path()).unwrap();
     if let HookResponse::Block { message } = resp {
-        assert!(message.contains("preview.sh"));
+        assert!(
+            message.contains("All steps in this checklist:\n  1. Did you check?"),
+            "message was: {message}"
+        );
     } else {
         panic!("expected block");
     }
@@ -363,7 +374,7 @@ reset = "session"
     if let HookResponse::Block { message } = resp {
         assert!(message.contains("pass"));
         assert!(message.contains("skip"));
-        assert!(message.contains("run one of:"));
+        assert!(message.contains("Pick the outcome that applies:"));
     } else {
         panic!("expected block");
     }
@@ -395,7 +406,7 @@ allow_preview_request = true
     if let HookResponse::Block { message } = resp {
         // preview.sh is never written for reset=always, so tip must not appear
         assert!(
-            !message.contains("preview.sh"),
+            !message.contains("preview.sh") && !message.contains("All steps"),
             "should not reference non-existent preview.sh: {message}"
         );
     } else {

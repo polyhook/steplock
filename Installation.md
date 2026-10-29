@@ -2,7 +2,7 @@
 
 ## Prerequisites
 
-- [`jq`](https://jqlang.github.io/jq/) — required at runtime by `ack.sh`
+- [`jq`](https://jqlang.github.io/jq/) — only for the deprecated `ack.sh` script
 - [`polyhook`](https://github.com/polyhook/polyhook) — the underlying hook transport
 - An AI coding tool that fires hooks (Claude Code, Cursor, Windsurf, Cline, Amp, or any polyhook-compatible tool)
 
@@ -193,9 +193,10 @@ Follow your tool's hook registration docs and point the hook command at `steploc
 Trigger a matched action from your AI tool (e.g. ask it to run `git push`). Expected output in the hook response:
 
 ```
-Did you write clean, readable code?
+[git-push-quality-gate: 1/4] Did you write clean, readable code?
 
-When finished, run: sh /path/to/repo/.steplock/sessions/<session-id>/git-push-quality-gate/ack.sh
+Checklist step 1 of 4. Do what it asks, then record the result:
+  steplock step done git-push-quality-gate clean_code --session <session-id> --evidence "<what you did and what you saw>"
 Then retry your original command.
 ```
 

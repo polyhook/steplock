@@ -45,7 +45,7 @@
     },
     "allow_preview_request": {
       "type": "boolean",
-      "description": "Let the agent run preview.sh to see all checklist items before starting. Defaults to false.",
+      "description": "List every checklist step in the first block message so the agent sees the full scope before starting. Defaults to false.",
       "default": false
     }
   }

@@ -3,7 +3,7 @@
 ## Prerequisites
 
 - [Rust](https://rustup.rs) stable (includes `cargo`, `rustfmt`, `clippy`)
-- [`jq`](https://jqlang.github.io/jq/) — required at runtime by `ack.sh`
+- [`jq`](https://jqlang.github.io/jq/) — only for the deprecated `ack.sh` script
 
 ## Build
 
@@ -38,7 +38,7 @@ RUSTDOCFLAGS="-D warnings" cargo doc --manifest-path core/Cargo.toml --no-deps
 
 ```
 core/          Rust crate (library + binary)
-core/scripts/  Shell scripts embedded in the binary (ack.sh)
+core/scripts/  Shell scripts embedded in the binary (deprecated ack.sh)
 schemas/       JSON Schema files for config.toml and state.json
 examples/      Working reference configurations
 ```
@@ -49,7 +49,8 @@ examples/      Working reference configurations
 - **Unit tests** — each module `<x>.rs` keeps its unit tests in a sibling `<x>_tests.rs`, declared with `#[cfg(test)] #[path = "<x>_tests.rs"] mod tests;`. Property tests go in `<x>_proptest_tests.rs`
 - **CEL evaluation** — `core/src/cel_eval.rs`
 - **Mermaid parsing** — `core/src/flow.rs`
-- **Shell scripts** — edit `core/scripts/ack.sh`; the binary embeds it via `include_str!` so a rebuild picks up your changes
+- **Recording steps** — `core/src/step.rs` (`steplock step done`)
+- **Shell scripts** (deprecated) — edit `core/scripts/ack.sh`; the binary embeds it via `include_str!` so a rebuild picks up your changes
 - **Schema** — update `schemas/checklist-config.schema.json` and the corresponding Rust struct in `core/src/config.rs`
 
 ## Submitting a pull request

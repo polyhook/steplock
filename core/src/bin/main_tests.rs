@@ -413,8 +413,8 @@ fn hermes_terminal_command_blocks_in_hermes_format() {
         .and_then(serde_json::Value::as_str)
         .unwrap_or_default();
     assert!(
-        message.contains("ack.sh"),
-        "block message must carry the ack command: {json}"
+        message.contains("steplock step done"),
+        "block message must carry the step done command: {json}"
     );
     assert!(
         tmp.path()

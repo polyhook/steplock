@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- `steplock step done <checklist> <step> --session <id> --evidence "..."` records a finished checklist step. It checks that the step is the current one and that the outcome (`--next`) is valid, and writes the evidence to `audit.log` as a `step_done` event
+- Gates never block a plain `steplock step ...` command, so evidence that quotes a gated command does not block the record
+
+### Changed
+- Block messages read as a checklist step and show the `steplock step done` command instead of `sh .../ack.sh`. Claude Code auto mode flagged running `ack.sh` as the agent approving its own gate, so agents in auto mode could not finish any checklist
+- With `allow_preview_request = true`, the first block message lists every step instead of pointing at `preview.sh`
+
+### Deprecated
+- `ack.sh` and `preview.sh` are still written to each session dir so old sessions keep working, but no message mentions them. They will be removed in a future release
+
 ## [0.2.2] - 2026-10-04
 
 ### Fixed
