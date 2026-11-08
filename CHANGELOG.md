@@ -15,6 +15,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Block messages read as a checklist step and show the `steplock step done` command instead of `sh .../ack.sh`. Claude Code auto mode flagged running `ack.sh` as the agent approving its own gate, so agents in auto mode could not finish any checklist
 - With `allow_preview_request = true`, the first block message lists every step instead of pointing at `preview.sh`
 
+### Fixed
+- `state.json` writes are now fsynced before the atomic rename, so a crash or power loss can no longer leave an empty or truncated session state. A failed write no longer leaves a `state.json.tmp.<pid>` file behind
+
 ### Deprecated
 - `ack.sh` and `preview.sh` are still written to each session dir so old sessions keep working, but no message mentions them. They will be removed in a future release
 

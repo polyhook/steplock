@@ -59,3 +59,40 @@ fn load_state_error_on_missing_file() {
     let path = tmp.path().join("nonexistent.json");
     load_state(&path).unwrap_err();
 }
+
+#[test]
+fn save_state_overwrites_and_leaves_no_temp_file() {
+    let tmp = TempDir::new().unwrap();
+    let path = tmp.path().join("state.json");
+    save_state(&path, &init_state("gate", "first")).unwrap();
+    save_state(&path, &init_state("gate", "second")).unwrap();
+    assert_eq!(
+        load_state(&path).unwrap().current_state,
+        "second",
+        "second save must win"
+    );
+    let names: Vec<_> = fs::read_dir(tmp.path())
+        .unwrap()
+        .map(|e| e.unwrap().file_name())
+        .collect();
+    assert_eq!(names, vec!["state.json"], "temp file must be renamed away");
+}
+
+#[test]
+fn save_state_failure_removes_temp_file() {
+    let tmp = TempDir::new().unwrap();
+    // Renaming a file over a non-empty directory fails on every platform.
+    let path = tmp.path().join("state.json");
+    fs::create_dir(&path).unwrap();
+    fs::write(path.join("keep"), "x").unwrap();
+    save_state(&path, &init_state("gate", "first")).unwrap_err();
+    let names: Vec<_> = fs::read_dir(tmp.path())
+        .unwrap()
+        .map(|e| e.unwrap().file_name())
+        .collect();
+    assert_eq!(
+        names,
+        vec!["state.json"],
+        "temp file must be cleaned up on failure"
+    );
+}

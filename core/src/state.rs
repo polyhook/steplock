@@ -1,6 +1,7 @@
 //! Session state persistence and core domain types.
 use std::collections::HashMap;
-use std::fs;
+use std::fs::{self, File};
+use std::io::{self, Write};
 use std::path::Path;
 use std::process;
 
@@ -48,18 +49,32 @@ pub fn load_state(path: &Path) -> Result<SessionState> {
     Ok(serde_json::from_str(&content)?)
 }
 
-/// Atomically write `state` to `path` via a PID-suffixed temp file and POSIX `mv`.
+/// Atomically write `state` to `path` via a PID-suffixed temp file and rename.
+///
+/// The temp file is fsynced before the rename, so a crash or power loss leaves
+/// either the old or the new `state.json` — never an empty or truncated one.
+/// The temp file is removed if the write or rename fails.
 ///
 /// # Errors
 ///
-/// Returns an error if serialization fails or the write or rename fails.
+/// Returns an error if serialization fails or the write, sync, or rename fails.
 pub fn save_state(path: &Path, state: &SessionState) -> Result<()> {
     let dir = path.parent().unwrap_or_else(|| Path::new("."));
     let tmp = dir.join(format!("state.json.tmp.{}", process::id()));
     let content = serde_json::to_string_pretty(state)?;
-    fs::write(&tmp, content)?;
-    fs::rename(&tmp, path)?;
-    Ok(())
+    let written = write_synced(&tmp, content.as_bytes()).and_then(|()| fs::rename(&tmp, path));
+    if written.is_err() {
+        // ponytail: best-effort cleanup; the original error is what matters.
+        let _ignored: io::Result<()> = fs::remove_file(&tmp);
+    }
+    Ok(written?)
+}
+
+/// Write `bytes` to a new file at `path` and flush it to disk.
+fn write_synced(path: &Path, bytes: &[u8]) -> io::Result<()> {
+    let mut file = File::create(path)?;
+    file.write_all(bytes)?;
+    file.sync_all()
 }
 
 /// Initialize fresh state for the first (initial) state of a flow.
