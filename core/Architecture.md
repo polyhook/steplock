@@ -17,9 +17,9 @@ run(event, repo_root)
             ├─ reset = "always":
             │       block on initial state, no state file
             │
-            └─ reset = "session" | "branch":
+            └─ reset = "session":
                     │
-                    ├── get_scope_key → session-id or branch name
+                    ├── get_scope_key → session-id, or the fallback-id
                     ├── create .steplock/sessions/<scope-key>/ if absent
                     ├── load state.json (or init from flow.initial)
                     │
@@ -48,11 +48,9 @@ Built from `stateDiagram-v2` Mermaid syntax by `flow::parse_mmd`. Only two const
 
 ## Scope key resolution
 
-`get_scope_key` is called for `reset = "session"` and `reset = "branch"`:
+`get_scope_key` is called for `reset = "session"`:
 
 - **session**: uses `event.session_id` if non-empty; otherwise reads or generates a UUID in `.steplock/sessions/fallback-id`.
-- **branch**: reads `.git/HEAD` walking up from the repo root. Falls back to `"unknown-branch"` if no `.git` found.
-
 ## Session state file
 
 `.steplock/sessions/<scope-key>/state.json` is the single source of truth. steplock writes it (via `save_state`) on each block and on each `steplock step done`; the deprecated `ack.sh` writes it via `jq + mv`. Both use atomic writes to avoid corruption under concurrent agent access.

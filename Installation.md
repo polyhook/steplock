@@ -46,8 +46,8 @@ Requires [Rust](https://rustup.rs) (stable).
 ```sh
 git clone https://github.com/polyhook/steplock.git
 cd steplock
-cargo build --release
-mv target/release/steplock /usr/local/bin/
+cargo build --release --manifest-path core/Cargo.toml
+mv core/target/release/steplock /usr/local/bin/
 ```
 
 ### Package managers
