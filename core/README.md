@@ -7,7 +7,10 @@ Rust library implementing the steplock gate logic. Used by the `steplock` CLI bi
 | Module       | Responsibility |
 | ------------ | -------------- |
 | `run`        | Entry point — evaluates all checklists and returns `HookResponse` |
+| `catalog`    | Discovers checklist directories under a checklists dir |
+| `gate`       | Evaluates one checklist against a hook event |
 | `config`     | Parses `config.toml` (`ChecklistConfig`) |
+| `global_config` | Finds the global steplock directory (`global_steplock_dir`) shared by every project |
 | `flow`       | Parses `flow.mmd` into a `FlowGraph` (Mermaid `stateDiagram-v2`) |
 | `state`      | `SessionState` — read/write `state.json` atomically |
 | `cel_eval`   | Evaluates `match_input` CEL expressions against a `HookEvent` |
